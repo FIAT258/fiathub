@@ -1,366 +1,312 @@
--- GUI Interface Arrastável
+-- Criação da interface principal
 local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
-local screenGui = Instance.new("ScreenGui")
-local mainFrame = Instance.new("Frame")
-local dragBar = Instance.new("Frame")
-local title = Instance.new("TextLabel")
-local selectPlayerBtn = Instance.new("TextButton")
-local toggleBtn = Instance.new("TextButton")
-local statusLabel = Instance.new("TextLabel")
-local selectedPlayerLabel = Instance.new("TextLabel")
+local guiService = game:GetService("GuiService")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local userInputService = game:GetService("UserInputService")
 
--- Configuração da GUI
+-- Criar ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AvatarCopierGUI"
 screenGui.Parent = player:WaitForChild("PlayerGui")
-screenGui.Name = "ToolGUI"
 screenGui.ResetOnSpawn = false
 
-mainFrame.Parent = screenGui
-mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(255, 170, 0)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-mainFrame.Size = UDim2.new(0, 300, 0, 200)
+-- Criar frame principal (arrastável)
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 300, 0, 150)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
-mainFrame.Draggable = false
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
 
-dragBar.Parent = mainFrame
-dragBar.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-dragBar.BorderSizePixel = 0
-dragBar.Size = UDim2.new(1, 0, 0, 25)
-dragBar.Position = UDim2.new(0, 0, 0, 0)
+-- Barra de título (para arrastar)
+local titleBar = Instance.new("Frame")
+titleBar.Name = "TitleBar"
+titleBar.Size = UDim2.new(1, 0, 0, 30)
+titleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = mainFrame
 
-title.Parent = dragBar
-title.BackgroundTransparency = 1
+-- Título
+local title = Instance.new("TextLabel")
+title.Name = "Title"
 title.Size = UDim2.new(1, 0, 1, 0)
-title.Text = "TOOL SELECT PLAYER"
+title.BackgroundTransparency = 1
+title.Text = "Avatar Copier"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
+title.Parent = titleBar
 
-selectPlayerBtn.Parent = mainFrame
-selectPlayerBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-selectPlayerBtn.BorderColor3 = Color3.fromRGB(255, 170, 0)
-selectPlayerBtn.Position = UDim2.new(0.5, -100, 0.25, 0)
-selectPlayerBtn.Size = UDim2.new(0, 200, 0, 35)
-selectPlayerBtn.Text = "SELECIONAR JOGADOR"
-selectPlayerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-selectPlayerBtn.Font = Enum.Font.Gotham
+-- Botão de fechar
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 30, 1, 0)
+closeButton.Position = UDim2.new(1, -30, 0, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.BackgroundTransparency = 0.2
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextScaled = true
+closeButton.Font = Enum.Font.GothamBold
+closeButton.BorderSizePixel = 0
+closeButton.Parent = titleBar
 
-toggleBtn.Parent = mainFrame
-toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-toggleBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Position = UDim2.new(0.5, -100, 0.55, 0)
-toggleBtn.Size = UDim2.new(0, 200, 0, 35)
-toggleBtn.Text = "KILL ÔNIBUS TEST"
-toggleBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
-toggleBtn.Font = Enum.Font.GothamBold
-
-statusLabel.Parent = mainFrame
-statusLabel.BackgroundTransparency = 1
-statusLabel.Position = UDim2.new(0, 10, 0.8, 0)
-statusLabel.Size = UDim2.new(1, -20, 0, 20)
-statusLabel.Text = "Status: Pronto"
-statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-statusLabel.TextScaled = true
-statusLabel.Font = Enum.Font.Gotham
-
-selectedPlayerLabel.Parent = mainFrame
-selectedPlayerLabel.BackgroundTransparency = 1
-selectedPlayerLabel.Position = UDim2.new(0, 10, 0.4, 0)
-selectedPlayerLabel.Size = UDim2.new(1, -20, 0, 20)
-selectedPlayerLabel.Text = "Nenhum jogador selecionado"
-selectedPlayerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-selectedPlayerLabel.TextScaled = true
-selectedPlayerLabel.Font = Enum.Font.Gotham
-
--- Tornar arrastável
-local dragging = false
-local dragInput
-local dragStart
-local startPos
-
-dragBar.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = input.Position
-		startPos = mainFrame.Position
-		
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
+closeButton.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
 end)
 
-dragBar.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement then
-		dragInput = input
-	end
-end)
+-- Container principal
+local container = Instance.new("Frame")
+container.Name = "Container"
+container.Size = UDim2.new(1, -20, 1, -50)
+container.Position = UDim2.new(0, 10, 0, 40)
+container.BackgroundTransparency = 1
+container.Parent = mainFrame
 
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		local delta = input.Position - dragStart
-		mainFrame.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + delta.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + delta.Y
-		)
-	end
-end)
+-- Dropdown Label
+local dropdownLabel = Instance.new("TextLabel")
+dropdownLabel.Name = "DropdownLabel"
+dropdownLabel.Size = UDim2.new(1, 0, 0, 20)
+dropdownLabel.Position = UDim2.new(0, 0, 0, 0)
+dropdownLabel.BackgroundTransparency = 1
+dropdownLabel.Text = "Selecione um jogador:"
+dropdownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+dropdownLabel.TextScaled = true
+dropdownLabel.Font = Enum.Font.Gotham
+dropdownLabel.Parent = container
 
--- Variáveis globais
+-- Criar dropdown
+local dropdownButton = Instance.new("TextButton")
+dropdownButton.Name = "DropdownButton"
+dropdownButton.Size = UDim2.new(1, 0, 0, 35)
+dropdownButton.Position = UDim2.new(0, 0, 0, 25)
+dropdownButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+dropdownButton.Text = "▼ Clique para selecionar"
+dropdownButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+dropdownButton.TextScaled = true
+dropdownButton.Font = Enum.Font.Gotham
+dropdownButton.BorderSizePixel = 0
+dropdownButton.Parent = container
+
+-- Frame do menu dropdown
+local dropdownMenu = Instance.new("ScrollingFrame")
+dropdownMenu.Name = "DropdownMenu"
+dropdownMenu.Size = UDim2.new(1, 0, 0, 120)
+dropdownMenu.Position = UDim2.new(0, 0, 0, 60)
+dropdownMenu.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+dropdownMenu.BackgroundTransparency = 0.1
+dropdownMenu.BorderSizePixel = 0
+dropdownMenu.Visible = false
+dropdownMenu.CanvasSize = UDim2.new(0, 0, 0, 0)
+dropdownMenu.ScrollBarThickness = 5
+dropdownMenu.Parent = container
+
+-- Layout para o menu
+local listLayout = Instance.new("UIListLayout")
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Padding = UDim.new(0, 2)
+listLayout.Parent = dropdownMenu
+
+-- Botão de copiar
+local copyButton = Instance.new("TextButton")
+copyButton.Name = "CopyButton"
+copyButton.Size = UDim2.new(1, 0, 0, 40)
+copyButton.Position = UDim2.new(0, 0, 1, -45)
+copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+copyButton.Text = "COPIAR AVATAR"
+copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+copyButton.TextScaled = true
+copyButton.Font = Enum.Font.GothamBold
+copyButton.BorderSizePixel = 0
+copyButton.Parent = container
+
+-- Função para atualizar lista de jogadores
 local selectedPlayer = nil
-local isActive = false
-local magnetActive = false
-local tweenService = game:GetService("TweenService")
-local runService = game:GetService("RunService")
-local connections = {}
 
--- Função para limpar conexões
-local function cleanup()
-	for _, connection in pairs(connections) do
-		connection:Disconnect()
-	end
-	connections = {}
-	magnetActive = false
+local function updatePlayerList()
+    -- Limpar menu
+    for _, child in ipairs(dropdownMenu:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    -- Obter lista de jogadores
+    local players = game.Players:GetPlayers()
+    local canvasHeight = #players * 25
+    
+    dropdownMenu.CanvasSize = UDim2.new(0, 0, 0, canvasHeight)
+    
+    -- Criar botões para cada jogador
+    for i, plr in ipairs(players) do
+        if plr ~= player then -- Não mostrar o próprio jogador
+            local playerButton = Instance.new("TextButton")
+            playerButton.Name = plr.Name
+            playerButton.Size = UDim2.new(1, -5, 0, 25)
+            playerButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+            playerButton.BackgroundTransparency = 0.2
+            playerButton.Text = plr.DisplayName .. " (" .. plr.Name .. ")"
+            playerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            playerButton.TextScaled = true
+            playerButton.Font = Enum.Font.Gotham
+            playerButton.BorderSizePixel = 0
+            playerButton.Parent = dropdownMenu
+            
+            -- Efeito hover
+            playerButton.MouseEnter:Connect(function()
+                playerButton.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+            end)
+            
+            playerButton.MouseLeave:Connect(function()
+                playerButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+            end)
+            
+            -- Selecionar jogador
+            playerButton.MouseButton1Click:Connect(function()
+                selectedPlayer = plr
+                dropdownButton.Text = "▼ " .. plr.DisplayName .. " (" .. plr.Name .. ")"
+                dropdownMenu.Visible = false
+            end)
+        end
+    end
 end
 
--- Função para encontrar VehicleSeat
-local function findVehicleSeat()
-	for _, obj in pairs(workspace:GetDescendants()) do
-		if obj.Name == "VehicleSeat" and obj:IsA("BasePart") then
-			return obj
-		end
-	end
-	return nil
-end
+-- Atualizar lista quando um jogador entrar/sair
+game.Players.PlayerAdded:Connect(updatePlayerList)
+game.Players.PlayerRemoved:Connect(updatePlayerList)
 
--- Função para encontrar SchoolBus
-local function findSchoolBus()
-	for _, obj in pairs(workspace:GetDescendants()) do
-		if obj.Name == "SchoolBus" then
-			return obj
-		end
-	end
-	return nil
-end
-
--- Função para verificar animação
-local function checkAnimation(character)
-	if not character then return false end
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Seated then
-		return true
-	end
-	
-	for _, obj in pairs(character:GetDescendants()) do
-		if obj.Name == "Animation_Sit" or (obj:IsA("Animation") and obj.AnimationId:find("sit")) then
-			return true
-		end
-	end
-	return false
-end
-
--- Função de magnetismo
-local function activateMagnet()
-	if not selectedPlayer or not selectedPlayer.Character then return end
-	
-	magnetActive = true
-	local vehicleSeat = findVehicleSeat()
-	local schoolBus = findSchoolBus()
-	
-	if not vehicleSeat or not schoolBus then
-		statusLabel.Text = "Erro: VehicleSeat ou SchoolBus não encontrado"
-		return
-	end
-	
-	-- Tween até o VehicleSeat
-	local tweenInfo = TweenInfo.new(
-		2,
-		Enum.EasingStyle.Quad,
-		Enum.EasingDirection.Out
-	)
-	
-	local targetPos = vehicleSeat.Position + Vector3.new(0, 5, 0)
-	local tween = tweenService:Create(player.Character.HumanoidRootPart, tweenInfo, {CFrame = CFrame.new(targetPos)})
-	tween:Play()
-	
-	statusLabel.Text = "Teleportando para VehicleSeat..."
-	task.wait(2)
-	
-	-- Ativar magnetismo
-	local magnetStrength = 100
-	local rotationSpeed = 5
-	
-	local magnetConnection = runService.Heartbeat:Connect(function(dt)
-		if not magnetActive or not selectedPlayer or not selectedPlayer.Character then
-			magnetActive = false
-			return
-		end
-		
-		local mainChar = player.Character
-		local targetChar = selectedPlayer.Character
-		local schoolBusPart = schoolBus:FindFirstChildWhichIsA("BasePart")
-		
-		if mainChar and targetChar and schoolBusPart then
-			local mainRoot = mainChar:FindFirstChild("HumanoidRootPart")
-			local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
-			
-			if mainRoot and targetRoot then
-				-- Puxar SchoolBus para o jogador principal
-				local busPos = schoolBusPart.Position
-				local mainPos = mainRoot.Position
-				local direction = (mainPos - busPos).Unit
-				schoolBusPart.Velocity = direction * magnetStrength
-				
-				-- Puxar jogador selecionado para o jogador principal
-				local targetDir = (mainPos - targetRoot.Position).Unit
-				targetRoot.Velocity = targetDir * magnetStrength
-				
-				-- Rotacionar SchoolBus
-				schoolBusPart.RotVelocity = Vector3.new(0, rotationSpeed, 0)
-				
-				-- Verificar animação do jogador selecionado
-				if checkAnimation(targetChar) then
-					-- Dar voo para baixo
-					local downTween = tweenService:Create(mainRoot, 
-						TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), 
-						{CFrame = mainRoot.CFrame * CFrame.new(0, -50, 0)}
-					)
-					downTween:Play()
-					
-					statusLabel.Text = "Animação detectada! Voo para baixo!"
-					task.wait(0.6)
-					cleanup()
-					magnetActive = false
-					statusLabel.Text = "Processo finalizado"
-				end
-			end
-		end
-	end)
-	
-	table.insert(connections, magnetConnection)
-end
-
--- Função principal
-local function executeKillBus()
-	if not selectedPlayer then
-		statusLabel.Text = "Selecione um jogador primeiro!"
-		return
-	end
-	
-	if isActive then
-		isActive = false
-		cleanup()
-		toggleBtn.Text = "KILL ÔNIBUS TEST"
-		toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-		statusLabel.Text = "Status: Desativado"
-	else
-		isActive = true
-		toggleBtn.Text = "DESATIVAR"
-		toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-		statusLabel.Text = "Status: Ativado - Teleportando..."
-		
-		-- Teleportar 20 pés (~6.1 metros) de distância
-		local playerPos = player.Character and player.Character.HumanoidRootPart.Position
-		if playerPos and selectedPlayer.Character then
-			local randomDir = Vector3.new(math.random(-10,10), 0, math.random(-10,10)).Unit
-			local teleportPos = playerPos + (randomDir * 6.1)
-			selectedPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(teleportPos)
-		end
-		
-		task.wait(0.5)
-		
-		-- Executar o código do FireServer
-		local args = {"PickingCar", "SchoolBus"}
-		local replicatedStorage = game:GetService("ReplicatedStorage")
-		local reFolder = replicatedStorage:FindFirstChild("RE")
-		if reFolder then
-			local carEvent = reFolder:FindFirstChild("1Ca1r")
-			if carEvent then
-				carEvent:FireServer(unpack(args))
-				statusLabel.Text = "Evento disparado!"
-			end
-		end
-		
-		task.wait(1)
-		activateMagnet()
-	end
-end
-
--- Selecionar jogador
-selectPlayerBtn.MouseButton1Click:Connect(function()
-	local players = game:GetService("Players"):GetPlayers()
-	local playerList = {}
-	
-	for _, plr in ipairs(players) do
-		if plr ~= player then
-			table.insert(playerList, plr.Name)
-		end
-	end
-	
-	if #playerList == 0 then
-		statusLabel.Text = "Nenhum outro jogador online"
-		return
-	end
-	
-	-- Criar menu simples de seleção (pode ser melhorado)
-	local selectionFrame = Instance.new("Frame")
-	selectionFrame.Parent = mainFrame
-	selectionFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-	selectionFrame.BorderColor3 = Color3.fromRGB(255, 170, 0)
-	selectionFrame.Position = UDim2.new(0, 10, 0, 30)
-	selectionFrame.Size = UDim2.new(1, -20, 0, #playerList * 25)
-	selectionFrame.ZIndex = 10
-	
-	for i, plrName in ipairs(playerList) do
-		local btn = Instance.new("TextButton")
-		btn.Parent = selectionFrame
-		btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-		btn.Size = UDim2.new(1, 0, 0, 23)
-		btn.Position = UDim2.new(0, 0, 0, (i-1)*25)
-		btn.Text = plrName
-		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-		btn.Font = Enum.Font.Gotham
-		btn.ZIndex = 11
-		
-		btn.MouseButton1Click:Connect(function()
-			selectedPlayer = game.Players:FindFirstChild(plrName)
-			selectedPlayerLabel.Text = "Selecionado: " .. plrName
-			statusLabel.Text = "Jogador selecionado!"
-			selectionFrame:Destroy()
-		end)
-	end
-	
-	-- Fechar ao clicar fora
-	local function closeOnClick(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			local pos = input.Position
-			local absPos = selectionFrame.AbsolutePosition
-			local absSize = selectionFrame.AbsoluteSize
-			if pos.X < absPos.X or pos.X > absPos.X + absSize.X or pos.Y < absPos.Y or pos.Y > absPos.Y + absSize.Y then
-				selectionFrame:Destroy()
-				game:GetService("UserInputService").InputBegan:Disconnect(closeConnection)
-			end
-		end
-	end
-	
-	local closeConnection = game:GetService("UserInputService").InputBegan:Connect(closeOnClick)
+-- Mostrar/esconder menu dropdown
+dropdownButton.MouseButton1Click:Connect(function()
+    dropdownMenu.Visible = not dropdownMenu.Visible
+    if dropdownMenu.Visible then
+        updatePlayerList()
+    end
 end)
 
--- Toggle button
-toggleBtn.MouseButton1Click:Connect(executeKillBus)
-
--- Manter o tool após reset
-player.CharacterAdded:Connect(function()
-	if screenGui and screenGui.Parent == nil then
-		screenGui.Parent = player:WaitForChild("PlayerGui")
-	end
+-- Fechar menu quando clicar fora
+userInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local pos = userInputService:GetMouseLocation()
+        local absolutePos = Vector2.new(pos.X, pos.Y)
+        
+        -- Verificar se clicou fora do menu
+        if dropdownMenu.Visible then
+            local menuPos = dropdownMenu.AbsolutePosition
+            local menuSize = dropdownMenu.AbsoluteSize
+            
+            if absolutePos.X < menuPos.X or absolutePos.X > menuPos.X + menuSize.X or
+               absolutePos.Y < menuPos.Y or absolutePos.Y > menuPos.Y + menuSize.Y then
+                dropdownMenu.Visible = false
+            end
+        end
+    end
 end)
 
--- Inicialização
-statusLabel.Text = "Pronto - Selecione um jogador"
+-- Função para copiar avatar
+local function copyAvatar(targetPlayer)
+    if not targetPlayer then
+        warn("Nenhum jogador selecionado!")
+        return
+    end
+    
+    -- Verificar se o jogador ainda está no jogo
+    if not targetPlayer.Parent then
+        warn("Jogador não está mais no jogo!")
+        dropdownButton.Text = "▼ Clique para selecionar"
+        selectedPlayer = nil
+        return
+    end
+    
+    -- Criar args baseado na estrutura
+    -- Estrutura típica: {[1] = player, [2] = outfitData, [3] = etc}
+    -- Vamos tentar diferentes formatos comuns
+    
+    -- Tentativa 1: Formato direto
+    local args1 = {
+        [1] = targetPlayer
+    }
+    
+    -- Tentativa 2: Formato com outfit
+    local args2 = {
+        [1] = targetPlayer.Character,
+        [2] = targetPlayer.UserId
+    }
+    
+    -- Tentativa 3: Formato com dados do avatar
+    local success, result = pcall(function()
+        -- Primeiro formato
+        local response = replicatedStorage:WaitForChild("Remotes"):WaitForChild("LoadOutfit"):InvokeServer(unpack(args1))
+        return response
+    end)
+    
+    if not success then
+        -- Tentar segundo formato
+        success, result = pcall(function()
+            return replicatedStorage:WaitForChild("Remotes"):WaitForChild("LoadOutfit"):InvokeServer(unpack(args2))
+        end)
+    end
+    
+    -- Feedback visual
+    if success then
+        copyButton.Text = "✓ AVATAR COPIADO!"
+        copyButton.BackgroundColor3 = Color3.fromRGB(50, 205, 50)
+        wait(1)
+        copyButton.Text = "COPIAR AVATAR"
+        copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+    else
+        copyButton.Text = "✗ ERRO AO COPIAR"
+        copyButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        wait(1)
+        copyButton.Text = "COPIAR AVATAR"
+        copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+    end
+end
+
+-- Conectar botão de cópia
+copyButton.MouseButton1Click:Connect(function()
+    copyAvatar(selectedPlayer)
+end)
+
+-- Efeito hover nos botões
+copyButton.MouseEnter:Connect(function()
+    copyButton.BackgroundColor3 = Color3.fromRGB(75, 115, 235)
+end)
+
+copyButton.MouseLeave:Connect(function()
+    copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+end)
+
+closeButton.MouseEnter:Connect(function()
+    closeButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+end)
+
+closeButton.MouseLeave:Connect(function()
+    closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+end)
+
+-- Inicializar lista
+wait(1)
+updatePlayerList()
+
+-- Notificação de carregamento
+local notification = Instance.new("TextLabel")
+notification.Name = "Notification"
+notification.Size = UDim2.new(1, -20, 0, 30)
+notification.Position = UDim2.new(0, 10, 0, 100)
+notification.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+notification.BackgroundTransparency = 0.2
+notification.Text = "Interface carregada! Selecione um jogador."
+notification.TextColor3 = Color3.fromRGB(200, 200, 200)
+notification.TextScaled = true
+notification.Font = Enum.Font.Gotham
+notification.BorderSizePixel = 0
+notification.Parent = container
+
+wait(3)
+notification:Destroy()
