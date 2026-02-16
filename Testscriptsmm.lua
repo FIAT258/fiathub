@@ -1,523 +1,277 @@
--- Criador de Avatar Copier com Interface Melhorada
+-- AVATAR COPIER SEQUENCIAL - VERSÃO COMPACTA
 local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
 local replicatedStorage = game:GetService("ReplicatedStorage")
 local userInputService = game:GetService("UserInputService")
-local tweenService = game:GetService("TweenService")
 
--- Criar ScreenGui com proteção
+-- Interface principal
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AvatarCopierGUI"
 screenGui.Parent = player:WaitForChild("PlayerGui")
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Estilo moderno com gradiente
-local gradient = Instance.new("UIGradient")
-gradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 40)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 30))
-})
-
--- Frame principal com sombra
 local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 350, 0, 220)
-mainFrame.Position = UDim2.new(0.5, -175, 0.5, -110)
+mainFrame.Size = UDim2.new(0, 350, 0, 250)
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.ClipsDescendants = true
+mainFrame.Draggable = true  -- ARRASTÁVEL
 mainFrame.Parent = screenGui
 
--- Aplicar gradiente
-gradient.Parent = mainFrame
-
--- Sombra
-local shadow = Instance.new("ImageLabel")
-shadow.Name = "Shadow"
-shadow.Size = UDim2.new(1, 20, 1, 20)
-shadow.Position = UDim2.new(0, -10, 0, -10)
-shadow.BackgroundTransparency = 1
-shadow.Image = "rbxassetid://6014261993"
-shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-shadow.ImageTransparency = 0.5
-shadow.ScaleType = Enum.ScaleType.Slice
-shadow.SliceCenter = Rect.new(10, 10, 10, 10)
-shadow.Parent = mainFrame
-
--- Barra de título com efeito
+-- Barra de título
 local titleBar = Instance.new("Frame")
-titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 40)
+titleBar.Size = UDim2.new(1, 0, 0, 35)
 titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-titleBar.BorderSizePixel = 0
 titleBar.Parent = mainFrame
 
--- Gradiente da barra
-local titleGradient = Instance.new("UIGradient")
-titleGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(45, 45, 60)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 35, 50))
-})
-titleGradient.Parent = titleBar
-
--- Ícone
-local icon = Instance.new("ImageLabel")
-icon.Name = "Icon"
-icon.Size = UDim2.new(0, 25, 0, 25)
-icon.Position = UDim2.new(0, 10, 0.5, -12.5)
-icon.BackgroundTransparency = 1
-icon.Image = "rbxassetid://6031090990" -- Ícone de avatar
-icon.ImageColor3 = Color3.fromRGB(100, 150, 255)
-icon.Parent = titleBar
-
--- Título
 local title = Instance.new("TextLabel")
-title.Name = "Title"
-title.Size = UDim2.new(1, -80, 1, 0)
-title.Position = UDim2.new(0, 40, 0, 0)
+title.Size = UDim2.new(1, -40, 1, 0)
+title.Position = UDim2.new(0, 10, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "COPY AVATAR"
+title.Text = "🎭 COPIAR AVATAR"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 18
+title.TextSize = 16
 title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = titleBar
 
--- Botão de fechar estilizado
 local closeButton = Instance.new("TextButton")
-closeButton.Name = "CloseButton"
 closeButton.Size = UDim2.new(0, 30, 0, 30)
 closeButton.Position = UDim2.new(1, -35, 0.5, -15)
 closeButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
 closeButton.Text = "✕"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 20
-closeButton.Font = Enum.Font.GothamBold
-closeButton.BorderSizePixel = 0
 closeButton.Parent = titleBar
 
--- Arredondar botão
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 6)
-closeCorner.Parent = closeButton
-
--- Container principal
+-- Container
 local container = Instance.new("Frame")
-container.Name = "Container"
-container.Size = UDim2.new(1, -30, 1, -60)
-container.Position = UDim2.new(0, 15, 0, 50)
+container.Size = UDim2.new(1, -20, 1, -45)
+container.Position = UDim2.new(0, 10, 0, 40)
 container.BackgroundTransparency = 1
 container.Parent = mainFrame
 
--- Label de instrução
-local instructionLabel = Instance.new("TextLabel")
-instructionLabel.Name = "InstructionLabel"
-instructionLabel.Size = UDim2.new(1, 0, 0, 25)
-instructionLabel.BackgroundTransparency = 1
-instructionLabel.Text = "Selecione um jogador para copiar:"
-instructionLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-instructionLabel.TextSize = 14
-instructionLabel.Font = Enum.Font.Gotham
-instructionLabel.TextXAlignment = Enum.TextXAlignment.Left
-instructionLabel.Parent = container
-
--- Frame do dropdown
-local dropdownFrame = Instance.new("Frame")
-dropdownFrame.Name = "DropdownFrame"
-dropdownFrame.Size = UDim2.new(1, 0, 0, 45)
-dropdownFrame.Position = UDim2.new(0, 0, 0, 30)
-dropdownFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-dropdownFrame.BorderSizePixel = 0
-dropdownFrame.Parent = container
-
--- Arredondar dropdown
-local dropdownCorner = Instance.new("UICorner")
-dropdownCorner.CornerRadius = UDim.new(0, 8)
-dropdownCorner.Parent = dropdownFrame
-
--- Botão do dropdown
+-- Dropdown
 local dropdownButton = Instance.new("TextButton")
-dropdownButton.Name = "DropdownButton"
-dropdownButton.Size = UDim2.new(1, 0, 1, 0)
-dropdownButton.BackgroundTransparency = 1
-dropdownButton.Text = ""
-dropdownButton.Parent = dropdownFrame
+dropdownButton.Size = UDim2.new(1, 0, 0, 40)
+dropdownButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+dropdownButton.Text = "📋 Selecionar Jogador ▼"
+dropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+dropdownButton.Parent = container
 
--- Texto do botão
-local buttonText = Instance.new("TextLabel")
-buttonText.Name = "ButtonText"
-buttonText.Size = UDim2.new(1, -40, 1, 0)
-buttonText.Position = UDim2.new(0, 15, 0, 0)
-buttonText.BackgroundTransparency = 1
-buttonText.Text = "Clique para selecionar"
-buttonText.TextColor3 = Color3.fromRGB(220, 220, 240)
-buttonText.TextSize = 16
-buttonText.Font = Enum.Font.Gotham
-buttonText.TextXAlignment = Enum.TextXAlignment.Left
-buttonText.Parent = dropdownButton
-
--- Seta do dropdown
-local arrow = Instance.new("TextLabel")
-arrow.Name = "Arrow"
-arrow.Size = UDim2.new(0, 30, 1, 0)
-arrow.Position = UDim2.new(1, -30, 0, 0)
-arrow.BackgroundTransparency = 1
-arrow.Text = "▼"
-arrow.TextColor3 = Color3.fromRGB(100, 150, 255)
-arrow.TextSize = 20
-arrow.Font = Enum.Font.GothamBold
-arrow.Parent = dropdownButton
-
--- Menu dropdown (agora como frame separado)
-local dropdownMenu = Instance.new("Frame")
-dropdownMenu.Name = "DropdownMenu"
-dropdownMenu.Size = UDim2.new(1, 0, 0, 200)
+-- Menu dropdown
+local dropdownMenu = Instance.new("ScrollingFrame")
+dropdownMenu.Size = UDim2.new(1, 0, 0, 150)
 dropdownMenu.Position = UDim2.new(0, 0, 0, 45)
-dropdownMenu.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-dropdownMenu.BorderSizePixel = 0
+dropdownMenu.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 dropdownMenu.Visible = false
-dropdownMenu.ClipsDescendants = true
+dropdownMenu.CanvasSize = UDim2.new(0, 0, 0, 0)
+dropdownMenu.AutomaticCanvasSize = Enum.AutomaticSize.Y
 dropdownMenu.Parent = container
 
--- Arredondar menu
-local menuCorner = Instance.new("UICorner")
-menuCorner.CornerRadius = UDim.new(0, 8)
-menuCorner.Parent = dropdownMenu
-
--- Lista de jogadores (ScrollingFrame)
-local playerList = Instance.new("ScrollingFrame")
-playerList.Name = "PlayerList"
-playerList.Size = UDim2.new(1, -10, 1, -10)
-playerList.Position = UDim2.new(0, 5, 0, 5)
-playerList.BackgroundTransparency = 1
-playerList.BorderSizePixel = 0
-playerList.ScrollBarThickness = 4
-playerList.ScrollBarImageColor3 = Color3.fromRGB(100, 150, 255)
-playerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-playerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-playerList.Parent = dropdownMenu
-
--- Layout da lista
-local listLayout = Instance.new("UIListLayout")
-listLayout.SortOrder = Enum.SortOrder.Name
-listLayout.Padding = UDim.new(0, 5)
-listLayout.Parent = playerList
-
--- Padding da lista
-local listPadding = Instance.new("UIPadding")
-listPadding.PaddingTop = UDim.new(0, 5)
-listPadding.PaddingBottom = UDim.new(0, 5)
-listPadding.Parent = playerList
-
--- Botão de copiar com efeito
-local copyButton = Instance.new("TextButton")
-copyButton.Name = "CopyButton"
-copyButton.Size = UDim2.new(1, 0, 0, 50)
-copyButton.Position = UDim2.new(0, 0, 1, -55)
-copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
-copyButton.Text = ""
-copyButton.BorderSizePixel = 0
-copyButton.Parent = container
-
--- Arredondar botão de copiar
-local copyCorner = Instance.new("UICorner")
-copyCorner.CornerRadius = UDim.new(0, 8)
-copyCorner.Parent = copyButton
-
--- Texto do botão de copiar
-local copyText = Instance.new("TextLabel")
-copyText.Name = "CopyText"
-copyText.Size = UDim2.new(1, 0, 1, 0)
-copyText.BackgroundTransparency = 1
-copyText.Text = "📋 COPIAR AVATAR"
-copyText.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyText.TextSize = 18
-copyText.Font = Enum.Font.GothamBold
-copyText.Parent = copyButton
-
--- Efeito de brilho no botão
-local copyGlow = Instance.new("ImageLabel")
-copyGlow.Name = "Glow"
-copyGlow.Size = UDim2.new(1, 20, 1, 20)
-copyGlow.Position = UDim2.new(0, -10, 0, -10)
-copyGlow.BackgroundTransparency = 1
-copyGlow.Image = "rbxassetid://3570695787"
-copyGlow.ImageColor3 = Color3.fromRGB(65, 105, 225)
-copyGlow.ImageTransparency = 0.7
-copyGlow.Parent = copyButton
-
--- Status label
+-- Status
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "StatusLabel"
-statusLabel.Size = UDim2.new(1, 0, 0, 20)
-statusLabel.Position = UDim2.new(0, 0, 1, -75)
+statusLabel.Size = UDim2.new(1, 0, 0, 30)
+statusLabel.Position = UDim2.new(0, 0, 0, 100)
 statusLabel.BackgroundTransparency = 1
-statusLabel.Text = ""
-statusLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+statusLabel.Text = "Pronto"
+statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 statusLabel.TextSize = 12
-statusLabel.Font = Enum.Font.Gotham
 statusLabel.Parent = container
+
+-- Barra de progresso
+local progressBar = Instance.new("Frame")
+progressBar.Size = UDim2.new(1, 0, 0, 5)
+progressBar.Position = UDim2.new(0, 0, 0, 135)
+progressBar.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+progressBar.Parent = container
+
+local progressFill = Instance.new("Frame")
+progressFill.Size = UDim2.new(0, 0, 1, 0)
+progressFill.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+progressFill.Parent = progressBar
+
+-- Contador
+local counterLabel = Instance.new("TextLabel")
+counterLabel.Size = UDim2.new(1, 0, 0, 20)
+counterLabel.Position = UDim2.new(0, 0, 0, 145)
+counterLabel.BackgroundTransparency = 1
+counterLabel.Text = "0/0 itens"
+counterLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
+counterLabel.TextSize = 11
+counterLabel.Parent = container
+
+-- Botão copiar
+local copyButton = Instance.new("TextButton")
+copyButton.Size = UDim2.new(1, 0, 0, 45)
+copyButton.Position = UDim2.new(0, 0, 1, -50)
+copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+copyButton.Text = "🔄 COPIAR (1s POR ID)"
+copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+copyButton.Font = Enum.Font.GothamBold
+copyButton.Parent = container
 
 -- Variáveis
 local selectedPlayer = nil
-local isMenuOpen = false
+local isCopying = false
+local itemIds = {}
 
--- Função para animar o menu
-local function toggleMenu()
-    isMenuOpen = not isMenuOpen
-    
-    -- Animação da seta
-    local rotation = isMenuOpen and 180 or 0
-    tweenService:Create(arrow, TweenInfo.new(0.2), {Rotation = rotation}):Play()
-    
-    -- Mostrar/esconder menu com animação
-    dropdownMenu.Visible = true
-    local targetSize = isMenuOpen and UDim2.new(1, 0, 0, 200) or UDim2.new(1, 0, 0, 0)
-    tweenService:Create(dropdownMenu, TweenInfo.new(0.3), {Size = targetSize}):Play()
-    
-    if not isMenuOpen then
-        task.wait(0.3)
-        dropdownMenu.Visible = false
-    else
-        updatePlayerList()
-    end
-end
+-- ========== FUNÇÕES ==========
 
--- Função para atualizar lista de jogadores
-function updatePlayerList()
-    -- Limpar lista
-    for _, child in ipairs(playerList:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
+-- Extrair IDs do avatar
+local function extrairIds(jogador)
+    local ids = {}
+    local char = jogador.Character
+    if not char then return ids end
+    
+    -- Acessórios
+    for _, obj in ipairs(char:GetChildren()) do
+        if obj:IsA("Accessory") and obj:FindFirstChild("Handle") then
+            local mesh = obj.Handle:FindFirstChildOfClass("SpecialMesh")
+            if mesh and mesh.MeshId ~= "" then
+                local id = mesh.MeshId:match("%d+")
+                if id then table.insert(ids, tonumber(id)) end
+            end
         end
     end
     
-    -- Obter todos os jogadores
-    local players = game.Players:GetPlayers()
+    -- Roupas
+    local shirt = char:FindFirstChildOfClass("Shirt")
+    if shirt and shirt.ShirtTemplate ~= "" then
+        local id = shirt.ShirtTemplate:match("%d+")
+        if id then table.insert(ids, tonumber(id)) end
+    end
     
-    -- Ordenar por nome
-    table.sort(players, function(a, b)
-        return a.DisplayName:lower() < b.DisplayName:lower()
+    local pants = char:FindFirstChildOfClass("Pants")
+    if pants and pants.PantsTemplate ~= "" then
+        local id = pants.PantsTemplate:match("%d+")
+        if id then table.insert(ids, tonumber(id)) end
+    end
+    
+    -- Remover duplicatas
+    local unicos = {}
+    local vistos = {}
+    for _, id in ipairs(ids) do
+        if not vistos[id] then
+            vistos[id] = true
+            table.insert(unicos, id)
+        end
+    end
+    
+    return unicos
+end
+
+-- Aplicar ID (PARTE IMPORTANTE)
+local function aplicarId(id)
+    local args = {id}  -- <<< ID ATUAL
+    local success = pcall(function()
+        replicatedStorage:WaitForChild("Remotes"):WaitForChild("Wear"):InvokeServer(unpack(args))
     end)
+    return success
+end
+
+-- Copiar sequencial
+local function copiarSequencial(jogador)
+    if not jogador then statusLabel.Text = "❌ Selecione um jogador!" return end
+    if isCopying then statusLabel.Text = "⏳ Já está copiando..." return end
     
-    -- Criar botões
-    for _, plr in ipairs(players) do
+    statusLabel.Text = "🔍 Extraindo IDs..."
+    itemIds = extrairIds(jogador)
+    
+    if #itemIds == 0 then
+        statusLabel.Text = "❌ Nenhum item encontrado!"
+        return
+    end
+    
+    isCopying = true
+    copyButton.Text = "⏸️ PARAR"
+    copyButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    
+    progressFill.Size = UDim2.new(0, 0, 1, 0)
+    counterLabel.Text = string.format("0/%d itens", #itemIds)
+    
+    local sucessos = 0
+    for i, id in ipairs(itemIds) do
+        if not isCopying then break end
+        
+        progressFill.Size = UDim2.new((i-1)/#itemIds, 0, 1, 0)
+        counterLabel.Text = string.format("%d/%d itens", i-1, #itemIds)
+        statusLabel.Text = string.format("📦 ID: %d", id)
+        
+        if aplicarId(id) then
+            sucessos = sucessos + 1
+        end
+        
+        if i < #itemIds and isCopying then
+            wait(1)  -- 1 SEGUNDO ENTRE IDs
+        end
+    end
+    
+    if isCopying then
+        progressFill.Size = UDim2.new(1, 0, 1, 0)
+        counterLabel.Text = string.format("%d/%d itens", #itemIds, #itemIds)
+        statusLabel.Text = string.format("✅ Concluído! %d/%d", sucessos, #itemIds)
+    end
+    
+    isCopying = false
+    copyButton.Text = "🔄 COPIAR (1s POR ID)"
+    copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+end
+
+-- Atualizar lista de jogadores
+local function atualizarLista()
+    for _, child in ipairs(dropdownMenu:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    for _, plr in ipairs(game.Players:GetPlayers()) do
         if plr ~= player then
-            -- Frame do item
-            local itemFrame = Instance.new("TextButton")
-            itemFrame.Name = plr.Name
-            itemFrame.Size = UDim2.new(1, 0, 0, 40)
-            itemFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-            itemFrame.AutoButtonColor = false
-            itemFrame.Text = ""
-            itemFrame.BorderSizePixel = 0
-            itemFrame.Parent = playerList
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -10, 0, 30)
+            btn.Position = UDim2.new(0, 5, 0, 0)
+            btn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+            btn.Text = plr.DisplayName .. " (" .. plr.Name .. ")"
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.TextSize = 12
+            btn.Parent = dropdownMenu
             
-            -- Arredondar item
-            local itemCorner = Instance.new("UICorner")
-            itemCorner.CornerRadius = UDim.new(0, 6)
-            itemCorner.Parent = itemFrame
-            
-            -- Ícone do jogador
-            local playerIcon = Instance.new("ImageLabel")
-            playerIcon.Size = UDim2.new(0, 30, 0, 30)
-            playerIcon.Position = UDim2.new(0, 5, 0.5, -15)
-            playerIcon.BackgroundTransparency = 1
-            playerIcon.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-            playerIcon.ImageColor3 = Color3.fromRGB(plr.UserId % 255, (plr.UserId * 2) % 255, (plr.UserId * 3) % 255)
-            
-            -- Tentar carregar a thumbnail do jogador
-            pcall(function()
-                local thumbType = Enum.ThumbnailType.AvatarBust
-                local thumbSize = Enum.ThumbnailSize.Size48x48
-                local content, isReady = game.Players:GetUserThumbnailAsync(plr.UserId, thumbType, thumbSize)
-                if isReady then
-                    playerIcon.Image = content
-                end
-            end)
-            
-            playerIcon.Parent = itemFrame
-            
-            -- Nome do jogador
-            local nameLabel = Instance.new("TextLabel")
-            nameLabel.Size = UDim2.new(1, -45, 1, 0)
-            nameLabel.Position = UDim2.new(0, 40, 0, 0)
-            nameLabel.BackgroundTransparency = 1
-            nameLabel.Text = string.format("%s (@%s)", plr.DisplayName, plr.Name)
-            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            nameLabel.TextSize = 14
-            nameLabel.Font = Enum.Font.Gotham
-            nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-            nameLabel.Parent = itemFrame
-            
-            -- Efeito hover
-            itemFrame.MouseEnter:Connect(function()
-                tweenService:Create(itemFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(55, 55, 70)}):Play()
-            end)
-            
-            itemFrame.MouseLeave:Connect(function()
-                tweenService:Create(itemFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 55)}):Play()
-            end)
-            
-            -- Selecionar jogador
-            itemFrame.MouseButton1Click:Connect(function()
+            btn.MouseButton1Click:Connect(function()
                 selectedPlayer = plr
-                buttonText.Text = string.format("✓ %s (%s)", plr.DisplayName, plr.Name)
-                buttonText.TextColor3 = Color3.fromRGB(100, 255, 150)
-                toggleMenu()
+                dropdownButton.Text = "✓ " .. plr.DisplayName .. " ▼"
+                dropdownMenu.Visible = false
                 
-                -- Resetar cor depois
-                task.wait(0.5)
-                buttonText.TextColor3 = Color3.fromRGB(220, 220, 240)
+                local ids = extrairIds(plr)
+                statusLabel.Text = string.format("📊 %d itens encontrados", #ids)
+                counterLabel.Text = string.format("0/%d itens", #ids)
             end)
         end
     end
 end
 
--- Eventos do dropdown
-dropdownButton.MouseButton1Click:Connect(toggleMenu)
+-- Eventos
+dropdownButton.MouseButton1Click:Connect(function()
+    dropdownMenu.Visible = not dropdownMenu.Visible
+    if dropdownMenu.Visible then atualizarLista() end
+end)
 
--- Fechar menu ao clicar fora
 userInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 and isMenuOpen then
-        local mousePos = userInputService:GetMouseLocation()
-        local dropdownPos = dropdownMenu.AbsolutePosition
-        local dropdownSize = dropdownMenu.AbsoluteSize
-        
-        -- Verificar se clicou fora do menu e do botão
-        if mousePos.X < dropdownPos.X or mousePos.X > dropdownPos.X + dropdownSize.X or
-           mousePos.Y < dropdownPos.Y or mousePos.Y > dropdownPos.Y + dropdownSize.Y then
-            local buttonPos = dropdownButton.AbsolutePosition
-            local buttonSize = dropdownButton.AbsoluteSize
-            
-            if mousePos.X < buttonPos.X or mousePos.X > buttonPos.X + buttonSize.X or
-               mousePos.Y < buttonPos.Y or mousePos.Y > buttonPos.Y + buttonSize.Y then
-                toggleMenu()
-            end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and dropdownMenu.Visible then
+        task.wait()
+        if not dropdownButton:IsMouseOver() and not dropdownMenu:IsMouseOver() then
+            dropdownMenu.Visible = false
         end
     end
 end)
 
--- Função para copiar avatar (lógica melhorada)
-function copyAvatar(targetPlayer)
-    if not targetPlayer then
-        statusLabel.Text = "❌ Selecione um jogador primeiro!"
-        return false
-    end
-    
-    statusLabel.Text = "📦 Copiando avatar..."
-    
-    -- Tentar diferentes abordagens
-    local remote = replicatedStorage:FindFirstChild("Remotes")
-    if not remote then
-        remote = replicatedStorage:FindFirstChild("Remote")
-    end
-    
-    if not remote then
-        -- Procurar em qualquer lugar
-        for _, obj in ipairs(replicatedStorage:GetChildren()) do
-            if obj:IsA("RemoteFunction") or obj:IsA("RemoteEvent") then
-                if obj.Name:lower():find("outfit") or obj.Name:lower():find("load") or obj.Name:lower():find("avatar") then
-                    remote = obj
-                    break
-                end
-            end
-        end
-    end
-    
-    if not remote then
-        statusLabel.Text = "❌ Remote não encontrado!"
-        return false
-    end
-    
-    local loadOutfit = remote:FindFirstChild("LoadOutfit") or remote:FindFirstChild("loadOutfit") or remote
-    
-    -- Coletar dados do avatar
-    local character = targetPlayer.Character
-    local outfitData = {}
-    
-    if character then
-        -- Coletar roupas
-        for _, child in ipairs(character:GetDescendants()) do
-            if child:IsA("Shirt") or child:IsA("Pants") or child:IsA("ShirtGraphic") then
-                outfitData[child.ClassName] = child.ShirtTemplate or child.PantsTemplate or child.Graphic
-            end
-        end
-    end
-    
-    -- Tentar diferentes formatos de args
-    local attempts = {
-        {targetPlayer},
-        {targetPlayer.UserId},
-        {targetPlayer.Character},
-        {targetPlayer, outfitData},
-        {targetPlayer.Name, outfitData},
-        {targetPlayer.UserId, outfitData},
-        {[1] = targetPlayer, [2] = outfitData},
-        {["player"] = targetPlayer, ["outfit"] = outfitData}
-    }
-    
-    for i, args in ipairs(attempts) do
-        local success = pcall(function()
-            if loadOutfit:IsA("RemoteFunction") then
-                return loadOutfit:InvokeServer(unpack(args))
-            elseif loadOutfit:IsA("RemoteEvent") then
-                loadOutfit:FireServer(unpack(args))
-                return true
-            end
-        end)
-        
-        if success then
-            statusLabel.Text = string.format("✅ Avatar de %s copiado!", targetPlayer.DisplayName)
-            
-            -- Animação do botão
-            tweenService:Create(copyButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(50, 205, 50)}):Play()
-            copyText.Text = "✓ AVATAR COPIADO!"
-            
-            task.wait(1)
-            
-            tweenService:Create(copyButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(65, 105, 225)}):Play()
-            copyText.Text = "📋 COPIAR AVATAR"
-            
-            return true
-        end
-    end
-    
-    statusLabel.Text = "❌ Falha ao copiar avatar!"
-    
-    -- Animação de erro
-    tweenService:Create(copyButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(200, 50, 50)}):Play()
-    copyText.Text = "✗ ERRO"
-    
-    task.wait(1)
-    
-    tweenService:Create(copyButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(65, 105, 225)}):Play()
-    copyText.Text = "📋 COPIAR AVATAR"
-    
-    return false
-end
-
--- Conectar botão de cópia
 copyButton.MouseButton1Click:Connect(function()
-    copyAvatar(selectedPlayer)
+    if isCopying then
+        isCopying = false
+        statusLabel.Text = "⏹️ Parando..."
+    else
+        copiarSequencial(selectedPlayer)
+    end
 end)
 
--- Atualizar lista quando jogadores entrarem/saírem
-game.Players.PlayerAdded:Connect(updatePlayerList)
-game.Players.PlayerRemoved:Connect(updatePlayerList)
-
--- Fechar
 closeButton.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
--- Inicializar lista
-task.wait(0.5)
-updatePlayerList()
-buttonText.Text = "Clique para selecionar"
-statusLabel.Text = "✅ Interface carregada!"
-task.wait(2)
-statusLabel.Text = ""
+-- Inicializar
+atualizarLista()
+print("✅ Script carregado! Interface arrastável.")
