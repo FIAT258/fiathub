@@ -1,18 +1,18 @@
--- AVATAR COPIER SEQUENCIAL - VERSÃO COMPACTA
+-- AVATAR COPIER COMPLETO - TODOS OS ITEMS E TODOS OS PLAYERS
 local player = game.Players.LocalPlayer
 local replicatedStorage = game:GetService("ReplicatedStorage")
 local userInputService = game:GetService("UserInputService")
 
--- Interface principal
+-- Interface
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 350, 0, 250)
-mainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+mainFrame.Size = UDim2.new(0, 350, 0, 280)
+mainFrame.Position = UDim2.new(0.5, -175, 0.5, -140)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 mainFrame.Active = true
-mainFrame.Draggable = true  -- ARRASTÁVEL
+mainFrame.Draggable = true
 mainFrame.Parent = screenGui
 
 -- Barra de título
@@ -25,7 +25,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -40, 1, 0)
 title.Position = UDim2.new(0, 10, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "🎭 COPIAR AVATAR"
+title.Text = "👤 COPIADOR COMPLETO"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextSize = 16
 title.Font = Enum.Font.GothamBold
@@ -47,11 +47,11 @@ container.Position = UDim2.new(0, 10, 0, 40)
 container.BackgroundTransparency = 1
 container.Parent = mainFrame
 
--- Dropdown
+-- Dropdown (MOSTRAR TODOS OS PLAYERS)
 local dropdownButton = Instance.new("TextButton")
 dropdownButton.Size = UDim2.new(1, 0, 0, 40)
 dropdownButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-dropdownButton.Text = "📋 Selecionar Jogador ▼"
+dropdownButton.Text = "📋 Selecione um jogador ▼"
 dropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 dropdownButton.Parent = container
 
@@ -102,7 +102,7 @@ local copyButton = Instance.new("TextButton")
 copyButton.Size = UDim2.new(1, 0, 0, 45)
 copyButton.Position = UDim2.new(0, 0, 1, -50)
 copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
-copyButton.Text = "🔄 COPIAR (1s POR ID)"
+copyButton.Text = "🔄 COPIAR TUDO (1s POR ID)"
 copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 copyButton.Font = Enum.Font.GothamBold
 copyButton.Parent = container
@@ -110,38 +110,150 @@ copyButton.Parent = container
 -- Variáveis
 local selectedPlayer = nil
 local isCopying = false
-local itemIds = {}
+local allIds = {}
 
--- ========== FUNÇÕES ==========
-
--- Extrair IDs do avatar
-local function extrairIds(jogador)
+-- ========== FUNÇÃO COMPLETA DE EXTRAÇÃO ==========
+local function extrairTodasPartes(jogador)
     local ids = {}
     local char = jogador.Character
-    if not char then return ids end
+    if not char then 
+        print("❌ Personagem não carregado:", jogador.Name)
+        return ids 
+    end
     
-    -- Acessórios
+    print("\n🔍 Extraindo TODOS os items de:", jogador.Name)
+    statusLabel.Text = "🔍 Extraindo items..."
+    
+    -- 1. ACESSÓRIOS (chapéus, cabelo, óculos, mochilas, etc)
     for _, obj in ipairs(char:GetChildren()) do
-        if obj:IsA("Accessory") and obj:FindFirstChild("Handle") then
-            local mesh = obj.Handle:FindFirstChildOfClass("SpecialMesh")
-            if mesh and mesh.MeshId ~= "" then
-                local id = mesh.MeshId:match("%d+")
-                if id then table.insert(ids, tonumber(id)) end
+        if obj:IsA("Accessory") or obj:IsA("Hat") then
+            local handle = obj:FindFirstChild("Handle")
+            if handle then
+                -- Mesh (acessórios 3D)
+                local mesh = handle:FindFirstChildOfClass("SpecialMesh") or handle:FindFirstChildOfClass("BlockMesh")
+                if mesh and mesh.MeshId ~= "" then
+                    local id = mesh.MeshId:match("%d+")
+                    if id then 
+                        table.insert(ids, tonumber(id))
+                        print("   🎩 Acessório (Mesh):", id)
+                    end
+                end
+                
+                -- Textura
+                local texture = handle:FindFirstChild("Texture")
+                if texture and texture.Texture ~= "" then
+                    local id = texture.Texture:match("%d+")
+                    if id then 
+                        table.insert(ids, tonumber(id))
+                        print("   🎨 Acessório (Textura):", id)
+                    end
+                end
             end
         end
     end
     
-    -- Roupas
+    -- 2. ROUPAS PRINCIPAIS
     local shirt = char:FindFirstChildOfClass("Shirt")
     if shirt and shirt.ShirtTemplate ~= "" then
         local id = shirt.ShirtTemplate:match("%d+")
-        if id then table.insert(ids, tonumber(id)) end
+        if id then 
+            table.insert(ids, tonumber(id))
+            print("   👕 Camisa:", id)
+        end
     end
     
     local pants = char:FindFirstChildOfClass("Pants")
     if pants and pants.PantsTemplate ~= "" then
         local id = pants.PantsTemplate:match("%d+")
-        if id then table.insert(ids, tonumber(id)) end
+        if id then 
+            table.insert(ids, tonumber(id))
+            print("   👖 Calça:", id)
+        end
+    end
+    
+    local graphic = char:FindFirstChildOfClass("ShirtGraphic")
+    if graphic and graphic.Graphic ~= "" then
+        local id = graphic.Graphic:match("%d+")
+        if id then 
+            table.insert(ids, tonumber(id))
+            print("   🖼️ Graphic:", id)
+        end
+    end
+    
+    -- 3. PARTES DO CORPO (HUMANOID DESCRIPTION)
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        -- Tentar pegar HumanoidDescription
+        local desc = humanoid:FindFirstChild("HumanoidDescription") or Instance.new("HumanoidDescription")
+        pcall(function() 
+            desc = humanoid:GetAppliedDescription() 
+        end)
+        
+        -- Face
+        if desc.Face and desc.Face ~= 0 then
+            table.insert(ids, desc.Face)
+            print("   😀 Face:", desc.Face)
+        end
+        
+        -- Cabeça
+        if desc.Head and desc.Head ~= 0 then
+            table.insert(ids, desc.Head)
+            print("   🧠 Cabeça:", desc.Head)
+        end
+        
+        -- Torso
+        if desc.Torso and desc.Torso ~= 0 then
+            table.insert(ids, desc.Torso)
+            print("   👕 Torso:", desc.Torso)
+        end
+        
+        -- Braços
+        if desc.LeftArm and desc.LeftArm ~= 0 then
+            table.insert(ids, desc.LeftArm)
+            print("   💪 Braço Esquerdo:", desc.LeftArm)
+        end
+        
+        if desc.RightArm and desc.RightArm ~= 0 then
+            table.insert(ids, desc.RightArm)
+            print("   💪 Braço Direito:", desc.RightArm)
+        end
+        
+        -- Pernas
+        if desc.LeftLeg and desc.LeftLeg ~= 0 then
+            table.insert(ids, desc.LeftLeg)
+            print("   🦵 Perna Esquerda:", desc.LeftLeg)
+        end
+        
+        if desc.RightLeg and desc.RightLeg ~= 0 then
+            table.insert(ids, desc.RightLeg)
+            print("   🦵 Perna Direita:", desc.RightLeg)
+        end
+    end
+    
+    -- 4. ANIMAÇÕES
+    local animate = char:FindFirstChild("Animate")
+    if animate then
+        for _, anim in ipairs(animate:GetChildren()) do
+            if anim:IsA("Animation") and anim.AnimationId ~= "" then
+                local id = anim.AnimationId:match("%d+")
+                if id then 
+                    table.insert(ids, tonumber(id))
+                    print("   💃 Animação:", id)
+                end
+            end
+        end
+    end
+    
+    -- 5. CORPO PADRÃO (se tiver)
+    for _, part in ipairs({"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
+        local meshPart = char:FindFirstChild(part)
+        if meshPart and meshPart:IsA("MeshPart") and meshPart.MeshId ~= "" then
+            local id = meshPart.MeshId:match("%d+")
+            if id then 
+                table.insert(ids, tonumber(id))
+                print("   🧩 Mesh " .. part .. ":", id)
+            end
+        end
     end
     
     -- Remover duplicatas
@@ -154,10 +266,11 @@ local function extrairIds(jogador)
         end
     end
     
+    print("✅ TOTAL de IDs únicos:", #unicos)
     return unicos
 end
 
--- Aplicar ID (PARTE IMPORTANTE)
+-- ========== APLICAR ID ==========
 local function aplicarId(id)
     local args = {id}  -- <<< ID ATUAL
     local success = pcall(function()
@@ -166,15 +279,22 @@ local function aplicarId(id)
     return success
 end
 
--- Copiar sequencial
-local function copiarSequencial(jogador)
-    if not jogador then statusLabel.Text = "❌ Selecione um jogador!" return end
-    if isCopying then statusLabel.Text = "⏳ Já está copiando..." return end
+-- ========== CÓPIA SEQUENCIAL ==========
+local function copiarTudo(jogador)
+    if not jogador then 
+        statusLabel.Text = "❌ Selecione um jogador!" 
+        return 
+    end
     
-    statusLabel.Text = "🔍 Extraindo IDs..."
-    itemIds = extrairIds(jogador)
+    if isCopying then 
+        statusLabel.Text = "⏳ Já está copiando..." 
+        return 
+    end
     
-    if #itemIds == 0 then
+    statusLabel.Text = "🔍 Extraindo TODOS os items..."
+    allIds = extrairTodasPartes(jogador)
+    
+    if #allIds == 0 then
         statusLabel.Text = "❌ Nenhum item encontrado!"
         return
     end
@@ -184,70 +304,107 @@ local function copiarSequencial(jogador)
     copyButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
     
     progressFill.Size = UDim2.new(0, 0, 1, 0)
-    counterLabel.Text = string.format("0/%d itens", #itemIds)
+    counterLabel.Text = string.format("0/%d itens", #allIds)
     
     local sucessos = 0
-    for i, id in ipairs(itemIds) do
+    local falhas = 0
+    
+    for i, id in ipairs(allIds) do
         if not isCopying then break end
         
-        progressFill.Size = UDim2.new((i-1)/#itemIds, 0, 1, 0)
-        counterLabel.Text = string.format("%d/%d itens", i-1, #itemIds)
-        statusLabel.Text = string.format("📦 ID: %d", id)
+        -- Atualizar progresso
+        progressFill.Size = UDim2.new((i-1)/#allIds, 0, 1, 0)
+        counterLabel.Text = string.format("%d/%d itens", i-1, #allIds)
+        statusLabel.Text = string.format("📦 ID %d/%d: %d", i, #allIds, id)
+        
+        print(string.format("▶️ Aplicando ID %d/%d: %d", i, #allIds, id))
         
         if aplicarId(id) then
             sucessos = sucessos + 1
+            print("   ✅ Sucesso")
+        else
+            falhas = falhas + 1
+            print("   ❌ Falha")
         end
         
-        if i < #itemIds and isCopying then
+        if i < #allIds and isCopying then
             wait(1)  -- 1 SEGUNDO ENTRE IDs
         end
     end
     
     if isCopying then
         progressFill.Size = UDim2.new(1, 0, 1, 0)
-        counterLabel.Text = string.format("%d/%d itens", #itemIds, #itemIds)
-        statusLabel.Text = string.format("✅ Concluído! %d/%d", sucessos, #itemIds)
+        counterLabel.Text = string.format("%d/%d itens", #allIds, #allIds)
+        statusLabel.Text = string.format("✅ Concluído! S:%d F:%d", sucessos, falhas)
+        print(string.format("\n✅ FINALIZADO! Sucessos: %d, Falhas: %d", sucessos, falhas))
+    else
+        statusLabel.Text = "⏹️ Parado pelo usuário"
+        print("\n⏹️ Cópia interrompida")
     end
     
     isCopying = false
-    copyButton.Text = "🔄 COPIAR (1s POR ID)"
+    copyButton.Text = "🔄 COPIAR TUDO (1s POR ID)"
     copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
 end
 
--- Atualizar lista de jogadores
+-- ========== ATUALIZAR LISTA (TODOS OS PLAYERS) ==========
 local function atualizarLista()
+    -- Limpar menu
     for _, child in ipairs(dropdownMenu:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
     end
     
-    for _, plr in ipairs(game.Players:GetPlayers()) do
-        if plr ~= player then
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -10, 0, 30)
-            btn.Position = UDim2.new(0, 5, 0, 0)
-            btn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
-            btn.Text = plr.DisplayName .. " (" .. plr.Name .. ")"
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btn.TextSize = 12
-            btn.Parent = dropdownMenu
+    -- Pegar TODOS os players (incluindo você mesmo)
+    local todosPlayers = game.Players:GetPlayers()
+    
+    -- Ordenar por nome
+    table.sort(todosPlayers, function(a, b)
+        return a.DisplayName:lower() < b.DisplayName:lower()
+    end)
+    
+    -- Criar botões para CADA jogador
+    for _, plr in ipairs(todosPlayers) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 0, 35)
+        btn.Position = UDim2.new(0, 5, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+        btn.Text = ""
+        btn.Parent = dropdownMenu
+        
+        -- Nome com ícone
+        local nomeLabel = Instance.new("TextLabel")
+        nomeLabel.Size = UDim2.new(1, -10, 1, 0)
+        nomeLabel.Position = UDim2.new(0, 5, 0, 0)
+        nomeLabel.BackgroundTransparency = 1
+        nomeLabel.Text = string.format("👤 %s (@%s)", plr.DisplayName, plr.Name)
+        nomeLabel.TextColor3 = plr == player and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(255, 255, 255)
+        nomeLabel.TextSize = 13
+        nomeLabel.Font = Enum.Font.Gotham
+        nomeLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nomeLabel.Parent = btn
+        
+        -- Evento de clique
+        btn.MouseButton1Click:Connect(function()
+            selectedPlayer = plr
+            dropdownButton.Text = string.format("✓ %s ▼", plr.DisplayName)
+            dropdownMenu.Visible = false
             
-            btn.MouseButton1Click:Connect(function()
-                selectedPlayer = plr
-                dropdownButton.Text = "✓ " .. plr.DisplayName .. " ▼"
-                dropdownMenu.Visible = false
-                
-                local ids = extrairIds(plr)
-                statusLabel.Text = string.format("📊 %d itens encontrados", #ids)
-                counterLabel.Text = string.format("0/%d itens", #ids)
-            end)
-        end
+            -- Preview dos IDs
+            local ids = extrairTodasPartes(plr)
+            statusLabel.Text = string.format("📊 %d items encontrados", #ids)
+            counterLabel.Text = string.format("0/%d itens", #ids)
+        end)
     end
 end
 
--- Eventos
+-- ========== EVENTOS ==========
 dropdownButton.MouseButton1Click:Connect(function()
     dropdownMenu.Visible = not dropdownMenu.Visible
-    if dropdownMenu.Visible then atualizarLista() end
+    if dropdownMenu.Visible then 
+        atualizarLista()
+    end
 end)
 
 userInputService.InputBegan:Connect(function(input)
@@ -264,7 +421,7 @@ copyButton.MouseButton1Click:Connect(function()
         isCopying = false
         statusLabel.Text = "⏹️ Parando..."
     else
-        copiarSequencial(selectedPlayer)
+        copiarTudo(selectedPlayer)
     end
 end)
 
@@ -272,6 +429,11 @@ closeButton.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
 
+-- Atualizar quando jogadores entrarem/saírem
+game.Players.PlayerAdded:Connect(atualizarLista)
+game.Players.PlayerRemoved:Connect(atualizarLista)
+
 -- Inicializar
 atualizarLista()
-print("✅ Script carregado! Interface arrastável.")
+print("✅ Script carregado! TODOS os players aparecem no dropdown")
+print("📌 Inclui: Acessórios, Roupas, Partes do Corpo, Animações")
