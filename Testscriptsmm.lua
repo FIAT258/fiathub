@@ -1,452 +1,432 @@
--- AVATAR COPIER COMPLETO - TODOS OS PLAYERS E TODOS OS ITEMS
-local player = game.Players.LocalPlayer
-local replicatedStorage = game:GetService("ReplicatedStorage")
-local userInputService = game:GetService("UserInputService")
+--[[
+    Script com Interface Arrastável
+    Funcionalidades:
+    - Interface bonita e arrastável
+    - Botão de minimizar
+    - Toggle Anti Lag (remove novas fontes de luz)
+    - Força tools a não serem removidas do inventário
+    - Auto-equip iPhone e mantém múltiplos tools equipados
+]]
 
--- Interface
+-- Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Variáveis
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 350, 0, 280)
-mainFrame.Position = UDim2.new(0.5, -175, 0.5, -140)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
-
--- Barra de titulo
-local titleBar = Instance.new("Frame")
-titleBar.Size = UDim2.new(1, 0, 0, 35)
-titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-titleBar.Parent = mainFrame
-
+local topBar = Instance.new("Frame")
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -40, 1, 0)
-title.Position = UDim2.new(0, 10, 0, 0)
+local minimizeBtn = Instance.new("ImageButton")
+local contentFrame = Instance.new("Frame")
+local iphoneBtn = Instance.new("ImageButton")
+local lagToggle = Instance.new("ImageButton")
+local statusText = Instance.new("TextLabel")
+local iphoneStatus = Instance.new("TextLabel")
+local dragToggle = nil
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+-- Configurar GUI
+screenGui.Name = "iPhoneToolGUI"
+screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Frame Principal
+mainFrame.Name = "MainFrame"
+mainFrame.Parent = screenGui
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+mainFrame.Size = UDim2.new(0, 400, 0, 300)
+mainFrame.ClipsDescendants = true
+mainFrame.Active = true
+mainFrame.Draggable = false
+
+-- Cantos arredondados
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = mainFrame
+
+-- Sombra
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.Parent = mainFrame
+shadow.BackgroundTransparency = 1
+shadow.Position = UDim2.new(0, -10, 0, -10)
+shadow.Size = UDim2.new(1, 20, 1, 20)
+shadow.Image = "rbxassetid://1316045217"
+shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+shadow.ImageTransparency = 0.7
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+
+-- Top Bar (para arrastar)
+topBar.Name = "TopBar"
+topBar.Parent = mainFrame
+topBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+topBar.BackgroundTransparency = 0.2
+topBar.BorderSizePixel = 0
+topBar.Size = UDim2.new(1, 0, 0, 40)
+
+local topBarCorner = Instance.new("UICorner")
+topBarCorner.CornerRadius = UDim.new(0, 12)
+topBarCorner.Parent = topBar
+
+-- Título
+title.Name = "Title"
+title.Parent = topBar
 title.BackgroundTransparency = 1
-title.Text = "AVATAR COPIER"
+title.Size = UDim2.new(1, -50, 1, 0)
+title.Position = UDim2.new(0, 15, 0, 0)
+title.Text = "iPhone Controller"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = 16
-title.Font = Enum.Font.GothamBold
 title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = titleBar
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
 
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 30, 0, 30)
-closeButton.Position = UDim2.new(1, -35, 0.5, -15)
-closeButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-closeButton.Text = "X"
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Parent = titleBar
+-- Botão Minimizar
+minimizeBtn.Name = "MinimizeBtn"
+minimizeBtn.Parent = topBar
+minimizeBtn.BackgroundTransparency = 1
+minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+minimizeBtn.Position = UDim2.new(1, -35, 0, 5)
+minimizeBtn.Image = "rbxassetid://3926305904"
+minimizeBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.ImageRectOffset = Vector2.new(4, 284)
+minimizeBtn.ImageRectSize = Vector2.new(36, 36)
 
--- Container
-local container = Instance.new("Frame")
-container.Size = UDim2.new(1, -20, 1, -45)
-container.Position = UDim2.new(0, 10, 0, 40)
-container.BackgroundTransparency = 1
-container.Parent = mainFrame
+-- Content Frame
+contentFrame.Name = "ContentFrame"
+contentFrame.Parent = mainFrame
+contentFrame.BackgroundTransparency = 1
+contentFrame.Size = UDim2.new(1, -20, 1, -50)
+contentFrame.Position = UDim2.new(0, 10, 0, 45)
 
--- Dropdown (TODOS OS PLAYERS)
-local dropdownButton = Instance.new("TextButton")
-dropdownButton.Size = UDim2.new(1, 0, 0, 40)
-dropdownButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-dropdownButton.Text = "SELECIONAR JOGADOR ▼"
-dropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-dropdownButton.Parent = container
+-- Botão iPhone
+iphoneBtn.Name = "iPhoneBtn"
+iphoneBtn.Parent = contentFrame
+iphoneBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+iphoneBtn.Size = UDim2.new(1, -20, 0, 50)
+iphoneBtn.Position = UDim2.new(0, 10, 0, 10)
+iphoneBtn.AutoButtonColor = true
+iphoneBtn.Image = "rbxassetid://3926307977"
+iphoneBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+iphoneBtn.ScaleType = Enum.ScaleType.Fit
 
--- Menu dropdown
-local dropdownMenu = Instance.new("ScrollingFrame")
-dropdownMenu.Size = UDim2.new(1, 0, 0, 150)
-dropdownMenu.Position = UDim2.new(0, 0, 0, 45)
-dropdownMenu.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-dropdownMenu.Visible = false
-dropdownMenu.CanvasSize = UDim2.new(0, 0, 0, 0)
-dropdownMenu.AutomaticCanvasSize = Enum.AutomaticSize.Y
-dropdownMenu.Parent = container
+local iphoneCorner = Instance.new("UICorner")
+iphoneCorner.CornerRadius = UDim.new(0, 8)
+iphoneCorner.Parent = iphoneBtn
 
--- Status
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, 0, 0, 30)
-statusLabel.Position = UDim2.new(0, 0, 0, 100)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "Pronto"
-statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusLabel.TextSize = 12
-statusLabel.Parent = container
+local iphoneLabel = Instance.new("TextLabel")
+iphoneLabel.Parent = iphoneBtn
+iphoneLabel.BackgroundTransparency = 1
+iphoneLabel.Size = UDim2.new(1, -50, 1, 0)
+iphoneLabel.Position = UDim2.new(0, 50, 0, 0)
+iphoneLabel.Text = "Equipar iPhone"
+iphoneLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+iphoneLabel.TextXAlignment = Enum.TextXAlignment.Left
+iphoneLabel.Font = Enum.Font.Gotham
+iphoneLabel.TextSize = 14
 
--- Barra de progresso
-local progressBar = Instance.new("Frame")
-progressBar.Size = UDim2.new(1, 0, 0, 5)
-progressBar.Position = UDim2.new(0, 0, 0, 135)
-progressBar.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-progressBar.Parent = container
+-- Status do iPhone
+iphoneStatus.Name = "iPhoneStatus"
+iphoneStatus.Parent = contentFrame
+iphoneStatus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+iphoneStatus.Size = UDim2.new(1, -20, 0, 30)
+iphoneStatus.Position = UDim2.new(0, 10, 0, 70)
+iphoneStatus.Text = "iPhone: Não equipado"
+iphoneStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+iphoneStatus.Font = Enum.Font.Gotham
+iphoneStatus.TextSize = 12
 
-local progressFill = Instance.new("Frame")
-progressFill.Size = UDim2.new(0, 0, 1, 0)
-progressFill.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
-progressFill.Parent = progressBar
+local statusCorner = Instance.new("UICorner")
+statusCorner.CornerRadius = UDim.new(0, 6)
+statusCorner.Parent = iphoneStatus
 
--- Contador
-local counterLabel = Instance.new("TextLabel")
-counterLabel.Size = UDim2.new(1, 0, 0, 20)
-counterLabel.Position = UDim2.new(0, 0, 0, 145)
-counterLabel.BackgroundTransparency = 1
-counterLabel.Text = "0/0 itens"
-counterLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
-counterLabel.TextSize = 11
-counterLabel.Parent = container
+-- Toggle Anti Lag
+lagToggle.Name = "LagToggle"
+lagToggle.Parent = contentFrame
+lagToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+lagToggle.Size = UDim2.new(1, -20, 0, 50)
+lagToggle.Position = UDim2.new(0, 10, 0, 120)
+lagToggle.AutoButtonColor = true
+lagToggle.Image = "rbxassetid://3926305904"
+lagToggle.ImageColor3 = Color3.fromRGB(200, 200, 200)
+lagToggle.ScaleType = Enum.ScaleType.Fit
 
--- Botao copiar
-local copyButton = Instance.new("TextButton")
-copyButton.Size = UDim2.new(1, 0, 0, 45)
-copyButton.Position = UDim2.new(0, 0, 1, -50)
-copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
-copyButton.Text = "COPIAR AVATAR COMPLETO"
-copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-copyButton.Font = Enum.Font.GothamBold
-copyButton.Parent = container
+local lagCorner = Instance.new("UICorner")
+lagCorner.CornerRadius = UDim.new(0, 8)
+lagCorner.Parent = lagToggle
 
--- Variaveis
-local selectedPlayer = nil
-local isCopying = false
-local allIds = {}
+local lagLabel = Instance.new("TextLabel")
+lagLabel.Parent = lagToggle
+lagLabel.BackgroundTransparency = 1
+lagLabel.Size = UDim2.new(1, -50, 1, 0)
+lagLabel.Position = UDim2.new(0, 50, 0, 0)
+lagLabel.Text = "Anti Lag: Desativado"
+lagLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+lagLabel.TextXAlignment = Enum.TextXAlignment.Left
+lagLabel.Font = Enum.Font.Gotham
+lagLabel.TextSize = 14
 
--- ===== FUNCAO COMPLETA DE EXTRACAO =====
-local function extrairTodosItems(jogador)
-    local ids = {}
-    local char = jogador.Character
-    if not char then 
-        print("Personagem nao carregado:", jogador.Name)
-        return ids 
-    end
-    
-    print("Extraindo TODOS os items de:", jogador.Name)
-    statusLabel.Text = "Extraindo items..."
-    
-    -- 1. ACESSORIOS (chapeus, cabelo, oculos, mochilas, tudo)
-    for _, obj in ipairs(char:GetChildren()) do
-        if obj:IsA("Accessory") or obj:IsA("Hat") then
-            local handle = obj:FindFirstChild("Handle")
-            if handle then
-                -- Mesh (acessorios 3D)
-                local mesh = handle:FindFirstChildOfClass("SpecialMesh") or handle:FindFirstChildOfClass("BlockMesh")
-                if mesh and mesh.MeshId ~= "" then
-                    local id = mesh.MeshId:match("%d+")
-                    if id then 
-                        table.insert(ids, tonumber(id))
-                        print("Acessorio Mesh:", id)
-                    end
-                end
-                
-                -- Textura
-                local texture = handle:FindFirstChild("Texture")
-                if texture and texture.Texture ~= "" then
-                    local id = texture.Texture:match("%d+")
-                    if id then 
-                        table.insert(ids, tonumber(id))
-                        print("Acessorio Textura:", id)
-                    end
-                end
-            end
-        end
-    end
-    
-    -- 2. ROUPAS
-    local shirt = char:FindFirstChildOfClass("Shirt")
-    if shirt and shirt.ShirtTemplate ~= "" then
-        local id = shirt.ShirtTemplate:match("%d+")
-        if id then 
-            table.insert(ids, tonumber(id))
-            print("Camisa:", id)
-        end
-    end
-    
-    local pants = char:FindFirstChildOfClass("Pants")
-    if pants and pants.PantsTemplate ~= "" then
-        local id = pants.PantsTemplate:match("%d+")
-        if id then 
-            table.insert(ids, tonumber(id))
-            print("Calca:", id)
-        end
-    end
-    
-    local graphic = char:FindFirstChildOfClass("ShirtGraphic")
-    if graphic and graphic.Graphic ~= "" then
-        local id = graphic.Graphic:match("%d+")
-        if id then 
-            table.insert(ids, tonumber(id))
-            print("Graphic:", id)
-        end
-    end
-    
-    -- 3. PARTES DO CORPO
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        -- Pegar HumanoidDescription
-        local desc = nil
-        pcall(function() 
-            desc = humanoid:GetAppliedDescription() 
-        end)
-        
-        if desc then
-            -- Face
-            if desc.Face and desc.Face ~= 0 then
-                table.insert(ids, desc.Face)
-                print("Face:", desc.Face)
-            end
-            
-            -- Cabeca
-            if desc.Head and desc.Head ~= 0 then
-                table.insert(ids, desc.Head)
-                print("Cabeca:", desc.Head)
-            end
-            
-            -- Torso
-            if desc.Torso and desc.Torso ~= 0 then
-                table.insert(ids, desc.Torso)
-                print("Torso:", desc.Torso)
-            end
-            
-            -- Bracos
-            if desc.LeftArm and desc.LeftArm ~= 0 then
-                table.insert(ids, desc.LeftArm)
-                print("Braco Esquerdo:", desc.LeftArm)
-            end
-            
-            if desc.RightArm and desc.RightArm ~= 0 then
-                table.insert(ids, desc.RightArm)
-                print("Braco Direito:", desc.RightArm)
-            end
-            
-            -- Pernas
-            if desc.LeftLeg and desc.LeftLeg ~= 0 then
-                table.insert(ids, desc.LeftLeg)
-                print("Perna Esquerda:", desc.LeftLeg)
-            end
-            
-            if desc.RightLeg and desc.RightLeg ~= 0 then
-                table.insert(ids, desc.RightLeg)
-                print("Perna Direita:", desc.RightLeg)
-            end
-        end
-    end
-    
-    -- 4. ANIMACOES
-    local animate = char:FindFirstChild("Animate")
-    if animate then
-        for _, anim in ipairs(animate:GetChildren()) do
-            if anim:IsA("Animation") and anim.AnimationId ~= "" then
-                local id = anim.AnimationId:match("%d+")
-                if id then 
-                    table.insert(ids, tonumber(id))
-                    print("Animacao:", id)
-                end
-            end
-        end
-    end
-    
-    -- 5. MESHES DAS PARTES
-    for _, part in ipairs({"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg"}) do
-        local meshPart = char:FindFirstChild(part)
-        if meshPart and meshPart:IsA("MeshPart") and meshPart.MeshId ~= "" then
-            local id = meshPart.MeshId:match("%d+")
-            if id then 
-                table.insert(ids, tonumber(id))
-                print("Mesh " .. part .. ":", id)
-            end
-        end
-    end
-    
-    -- 6. SKINS E TEXTURAS EXTRAS
-    for _, obj in ipairs(char:GetChildren()) do
-        if obj:IsA("StringValue") and obj.Name:find("Skin") and obj.Value ~= "" then
-            local id = obj.Value:match("%d+")
-            if id then 
-                table.insert(ids, tonumber(id))
-                print("Skin:", id)
-            end
-        end
-    end
-    
-    -- Remover duplicatas
-    local unicos = {}
-    local vistos = {}
-    for _, id in ipairs(ids) do
-        if not vistos[id] then
-            vistos[id] = true
-            table.insert(unicos, id)
-        end
-    end
-    
-    print("TOTAL de IDs unicos:", #unicos)
-    return unicos
+-- Status geral
+statusText.Name = "StatusText"
+statusText.Parent = contentFrame
+statusText.BackgroundTransparency = 1
+statusText.Size = UDim2.new(1, -20, 0, 30)
+statusText.Position = UDim2.new(0, 10, 0, 180)
+statusText.Text = "Status: Ativo"
+statusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+statusText.Font = Enum.Font.Gotham
+statusText.TextSize = 12
+
+-- Variáveis de controle
+local minimized = false
+local antiLagActive = false
+local originalSize = mainFrame.Size
+local toolConnection = nil
+local toolsBlocked = {}
+
+-- Função para tornar arrastável
+local function updateDrag(input)
+	local delta = input.Position - dragStart
+	local newPos = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+	
+	-- Limitar à tela
+	local viewportSize = workspace.CurrentCamera.ViewportSize
+	newPos = UDim2.new(
+		0,
+		math.clamp(newPos.X.Offset, 0, viewportSize.X - mainFrame.AbsoluteSize.X),
+		0,
+		math.clamp(newPos.Y.Offset, 0, viewportSize.Y - mainFrame.AbsoluteSize.Y)
+	)
+	
+	mainFrame.Position = newPos
 end
 
--- ===== APLICAR ID =====
-local function aplicarId(id)
-    local args = {id}
-    local success = pcall(function()
-        replicatedStorage:WaitForChild("Remotes"):WaitForChild("Wear"):InvokeServer(unpack(args))
-    end)
-    return success
+topBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragToggle = true
+		dragStart = input.Position
+		startPos = mainFrame.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragToggle = false
+			end
+		end)
+	end
+end)
+
+topBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragToggle then
+		updateDrag(input)
+	end
+end)
+
+-- Função Minimizar
+minimizeBtn.MouseButton1Click:Connect(function()
+	minimized = not minimized
+	
+	if minimized then
+		mainFrame:TweenSize(UDim2.new(0, 400, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
+		contentFrame.Visible = false
+		minimizeBtn.ImageRectOffset = Vector2.new(4, 244)
+	else
+		mainFrame:TweenSize(originalSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
+		contentFrame.Visible = true
+		minimizeBtn.ImageRectOffset = Vector2.new(4, 284)
+	end
+end)
+
+-- Função para bloquear remoção de tools
+local function blockToolRemoval(tool)
+	if toolsBlocked[tool] then return end
+	
+	toolsBlocked[tool] = true
+	
+	-- Conectar ao evento de remoção
+	local connection
+	connection = tool.AncestryChanged:Connect(function()
+		if not tool.Parent then
+			-- Tool foi removida, colocar de volta no jogador
+			tool.Parent = player.Backpack
+			statusText.Text = "Tool bloqueada: " .. tool.Name
+			statusText.TextColor3 = Color3.fromRGB(255, 255, 0)
+			task.wait(2)
+			statusText.Text = "Status: Ativo"
+			statusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+		end
+	end)
+	
+	-- Armazenar conexão
+	tool:SetAttribute("BlockConnection", connection)
 end
 
--- ===== COPIA SEQUENCIAL =====
-local function copiarTudo(jogador)
-    if not jogador then 
-        statusLabel.Text = "Selecione um jogador!" 
-        return 
-    end
-    
-    if isCopying then 
-        statusLabel.Text = "Ja esta copiando..." 
-        return 
-    end
-    
-    statusLabel.Text = "Extraindo todos os items..."
-    allIds = extrairTodosItems(jogador)
-    
-    if #allIds == 0 then
-        statusLabel.Text = "Nenhum item encontrado!"
-        return
-    end
-    
-    isCopying = true
-    copyButton.Text = "PARAR COPIA"
-    copyButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
-    
-    progressFill.Size = UDim2.new(0, 0, 1, 0)
-    counterLabel.Text = string.format("0/%d itens", #allIds)
-    
-    local sucessos = 0
-    local falhas = 0
-    
-    for i, id in ipairs(allIds) do
-        if not isCopying then break end
-        
-        -- Atualizar progresso
-        progressFill.Size = UDim2.new((i-1)/#allIds, 0, 1, 0)
-        counterLabel.Text = string.format("%d/%d itens", i-1, #allIds)
-        statusLabel.Text = string.format("Aplicando ID %d/%d: %d", i, #allIds, id)
-        
-        print(string.format("Aplicando ID %d/%d: %d", i, #allIds, id))
-        
-        if aplicarId(id) then
-            sucessos = sucessos + 1
-            print("Sucesso")
-        else
-            falhas = falhas + 1
-            print("Falha")
-        end
-        
-        if i < #allIds and isCopying then
-            wait(1)
-        end
-    end
-    
-    if isCopying then
-        progressFill.Size = UDim2.new(1, 0, 1, 0)
-        counterLabel.Text = string.format("%d/%d itens", #allIds, #allIds)
-        statusLabel.Text = string.format("Concluido! S:%d F:%d", sucessos, falhas)
-        print(string.format("FINALIZADO! Sucessos: %d, Falhas: %d", sucessos, falhas))
-    else
-        statusLabel.Text = "Parado pelo usuario"
-        print("Copia interrompida")
-    end
-    
-    isCopying = false
-    copyButton.Text = "COPIAR AVATAR COMPLETO"
-    copyButton.BackgroundColor3 = Color3.fromRGB(65, 105, 225)
+-- Função para detectar tools
+local function checkTools()
+	for _, tool in ipairs(player.Backpack:GetChildren()) do
+		if tool:IsA("Tool") and not toolsBlocked[tool] then
+			blockToolRemoval(tool)
+		end
+	end
+	
+	for _, tool in ipairs(player.Character:GetChildren()) do
+		if tool:IsA("Tool") and not toolsBlocked[tool] then
+			blockToolRemoval(tool)
+		end
+	end
 end
 
--- ===== ATUALIZAR LISTA (TODOS OS PLAYERS) =====
-local function atualizarLista()
-    -- Limpar menu
-    for _, child in ipairs(dropdownMenu:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-    
-    -- Pegar TODOS os players
-    local todosPlayers = game.Players:GetPlayers()
-    
-    -- Ordenar por nome
-    table.sort(todosPlayers, function(a, b)
-        return a.DisplayName:lower() < b.DisplayName:lower()
-    end)
-    
-    -- Criar botoes para CADA jogador
-    for _, plr in ipairs(todosPlayers) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, -10, 0, 35)
-        btn.Position = UDim2.new(0, 5, 0, 0)
-        btn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
-        btn.Text = ""
-        btn.Parent = dropdownMenu
-        
-        -- Nome do jogador
-        local nomeLabel = Instance.new("TextLabel")
-        nomeLabel.Size = UDim2.new(1, -10, 1, 0)
-        nomeLabel.Position = UDim2.new(0, 5, 0, 0)
-        nomeLabel.BackgroundTransparency = 1
-        nomeLabel.Text = string.format("%s (@%s)", plr.DisplayName, plr.Name)
-        nomeLabel.TextColor3 = plr == player and Color3.fromRGB(100, 255, 150) or Color3.fromRGB(255, 255, 255)
-        nomeLabel.TextSize = 13
-        nomeLabel.Font = Enum.Font.Gotham
-        nomeLabel.TextXAlignment = Enum.TextXAlignment.Left
-        nomeLabel.Parent = btn
-        
-        -- Evento de clique
-        btn.MouseButton1Click:Connect(function()
-            selectedPlayer = plr
-            dropdownButton.Text = string.format("%s ▼", plr.DisplayName)
-            dropdownMenu.Visible = false
-            
-            -- Preview dos IDs
-            local ids = extrairTodosItems(plr)
-            statusLabel.Text = string.format("%d items encontrados", #ids)
-            counterLabel.Text = string.format("0/%d itens", #ids)
-        end)
-    end
+-- Loop principal
+task.spawn(function()
+	while true do
+		task.wait(1)
+		checkTools()
+		
+		-- Verificar se iPhone está no inventário
+		local hasIPhone = false
+		local iphoneTool = nil
+		
+		for _, tool in ipairs(player.Backpack:GetChildren()) do
+			if tool:IsA("Tool") and tool.Name == "Iphone" then
+				hasIPhone = true
+				iphoneTool = tool
+				break
+			end
+		end
+		
+		if not hasIPhone then
+			for _, tool in ipairs(player.Character:GetChildren()) do
+				if tool:IsA("Tool") and tool.Name == "Iphone" then
+					hasIPhone = true
+					iphoneTool = tool
+					break
+				end
+			end
+		end
+		
+		-- Atualizar status
+		if hasIPhone then
+			iphoneStatus.Text = "iPhone: Equipado/Disponível ✓"
+			iphoneStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
+		else
+			iphoneStatus.Text = "iPhone: Não encontrado ✗"
+			iphoneStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+		end
+		
+		-- ⬇️⬇️⬇️ SEU CÓDIGO AQUI - EXECUTADO A CADA 1 SEGUNDO ⬇️⬇️⬇️
+		local args = {
+			"PickingTools",
+			"Iphone"
+		}
+		
+		local success, result = pcall(function()
+			return game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Too1l"):InvokeServer(unpack(args))
+		end)
+		
+		if not success then
+			statusText.Text = "Erro ao executar comando"
+			statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+		else
+			print("Comando executado:", result) -- Debug opcional
+		end
+		-- ⬆️⬆️⬆️ SEU CÓDIGO AQUI ⬆️⬆️⬆️
+	end
+end)
+
+-- Equipar iPhone quando disponível
+local function equipIPhone()
+	for _, tool in ipairs(player.Backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool.Name == "Iphone" then
+			tool.Parent = player.Character
+			break
+		end
+	end
 end
 
--- ===== EVENTOS =====
-dropdownButton.MouseButton1Click:Connect(function()
-    dropdownMenu.Visible = not dropdownMenu.Visible
-    if dropdownMenu.Visible then 
-        atualizarLista()
-    end
+-- Monitorar inventário para equipar iPhone
+player.Backpack.ChildAdded:Connect(function(child)
+	if child:IsA("Tool") and child.Name == "Iphone" then
+		task.wait(0.1)
+		equipIPhone()
+	end
 end)
 
-userInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 and dropdownMenu.Visible then
-        task.wait()
-        if not dropdownButton:IsMouseOver() and not dropdownMenu:IsMouseOver() then
-            dropdownMenu.Visible = false
-        end
-    end
+-- Monitorar character para manter múltiplos tools equipados
+player.CharacterAdded:Connect(function(character)
+	task.wait(0.5)
+	equipIPhone()
 end)
 
-copyButton.MouseButton1Click:Connect(function()
-    if isCopying then
-        isCopying = false
-        statusLabel.Text = "Parando..."
-    else
-        copiarTudo(selectedPlayer)
-    end
+-- Toggle Anti Lag
+lagToggle.MouseButton1Click:Connect(function()
+	antiLagActive = not antiLagActive
+	
+	if antiLagActive then
+		lagLabel.Text = "Anti Lag: Ativado"
+		lagToggle.ImageColor3 = Color3.fromRGB(100, 255, 100)
+		statusText.Text = "Anti Lag ativado - Bloqueando novas luzes"
+		
+		-- Conectar ao evento de criação de luzes
+		if toolConnection then
+			toolConnection:Disconnect()
+		end
+		
+		toolConnection = game.DescendantAdded:Connect(function(instance)
+			if antiLagActive and instance:IsA("Light") then
+				-- Remover apenas luzes novas
+				task.wait()
+				if instance and instance.Parent then
+					instance:Destroy()
+					statusText.Text = "Nova luz bloqueada!"
+					statusText.TextColor3 = Color3.fromRGB(255, 255, 0)
+					task.wait(1)
+					statusText.Text = "Anti Lag ativado - Bloqueando novas luzes"
+					statusText.TextColor3 = Color3.fromRGB(100, 255, 100)
+				end
+			end
+		end)
+	else
+		lagLabel.Text = "Anti Lag: Desativado"
+		lagToggle.ImageColor3 = Color3.fromRGB(200, 200, 200)
+		statusText.Text = "Anti Lag desativado"
+		statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
+		
+		if toolConnection then
+			toolConnection:Disconnect()
+			toolConnection = nil
+		end
+	end
 end)
 
-closeButton.MouseButton1Click:Connect(function()
-    screenGui:Destroy()
+-- Limpeza ao remover GUI
+screenGui.DescendantRemoving:Connect(function()
+	if toolConnection then
+		toolConnection:Disconnect()
+	end
 end)
 
--- Atualizar quando jogadores entrarem/sairem
-game.Players.PlayerAdded:Connect(atualizarLista)
-game.Players.PlayerRemoved:Connect(atualizarLista)
-
--- Inicializar
-atualizarLista()
-print("Script carregado! TODOS os players aparecem no dropdown")
-print("Inclui: Acessorios, Roupas, Partes do Corpo, Animacoes, Meshes, Skins")
+print("iPhone Controller carregado com sucesso!")
+statusText.Text = "Status: Carregado ✓"
