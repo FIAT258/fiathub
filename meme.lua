@@ -1,11 +1,12 @@
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 local Window = WindUI:CreateWindow({
-    Title = "XfireX HUB (meme sea) BETA",
+    Title = "XfireX HUB (meme sea) beta",
     Icon = "door-open", -- lucide icon
-    Author = "by fiat",
+    Author = "by FIAT",
     Folder = "MySuperHub",
     
+    -- ↓ This all is Optional. You can remove it.
     Size = UDim2.fromOffset(580, 460),
     MinSize = Vector2.new(560, 350),
     MaxSize = Vector2.new(850, 560),
@@ -17,6 +18,15 @@ local Window = WindUI:CreateWindow({
     HideSearchBar = true,
     ScrollBarEnabled = false,
     
+    
+     You can set 'rbxassetid://' or video to Background.
+        'rbxassetid://':
+            Background = "rbxassetid://", -- rbxassetid
+        Video:
+            Background = "video:YOUR-RAW-LINK-TO-VIDEO.webm", -- video 
+
+    
+    -- ↓ Optional. You can remove it.
     User = {
         Enabled = true,
         Anonymous = true,
@@ -25,18 +35,38 @@ local Window = WindUI:CreateWindow({
         end,
     },
     
-    <<<não remova key sisten
+    --       remove this all, 
+    -- !  ↓  if you DON'T need the key system
     KeySystem = { 
+        -- ↓ Optional. You can remove it.
         Key = { "#fire#hubx130key18722--KEYwalfy", "#fire#hubx130key18722--KEYwalfy" },
-        Note = "BETA por que nunca peguei nessa interface",
+        
+        Note = "Example Key System.",
+        
+        -- ↓ Optional. You can remove it.
         Thumbnail = {
-            Image = "rbxassetid://82224027035247", -- ID da imagem adicionado aqui
-            Title = "KEY sisten by fiat (salva para sempre)",
+            Image = "rbxassetid://",
+            Title = "FIAT HUB KEY SISTEN",
         },
-        URL = "",
-        SaveKey = true,
+        
+        -- ↓ Optional. You can remove it.
+        URL = "REAL",
+        
+        -- ↓ Optional. You can remove it.
+        SaveKey = true, --  save and load the key.
+        
+        -- ↓ Optional. You can remove it.
+        -- API = {} ← Services. Read about it below ↓
     },
 })
+
+WindUI:GetTransparency(false)
+
+WindUI:GetWindowSize(52)
+
+
+
+
 
 -- Tab Auto Farm
 local AutoFarmTab = Window:Tab({
