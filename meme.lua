@@ -2,10 +2,11 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 local Window = WindUI:CreateWindow({
     Title = "XfireX HUB (meme sea) beta",
-    Icon = "door-open",
+    Icon = "door-open", -- lucide icon
     Author = "by FIAT",
     Folder = "MySuperHub",
     
+    -- ↓ This all is Optional. You can remove it.
     Size = UDim2.fromOffset(580, 460),
     MinSize = Vector2.new(560, 350),
     MaxSize = Vector2.new(850, 560),
@@ -17,15 +18,16 @@ local Window = WindUI:CreateWindow({
     HideSearchBar = true,
     ScrollBarEnabled = false,
     
-    -- CORREÇÃO: Fechei corretamente o comentário da seção Background
-    --[[ 
+    -- CORREÇÃO 1: COMENTÁRIO CORRETAMENTE FECHADO
+    --[[
     You can set 'rbxassetid://' or video to Background.
         'rbxassetid://':
             Background = "rbxassetid://", -- rbxassetid
         Video:
             Background = "video:YOUR-RAW-LINK-TO-VIDEO.webm", -- video 
-    --]] 
+    --]]
     
+    -- ↓ Optional. You can remove it.
     User = {
         Enabled = true,
         Anonymous = true,
@@ -34,19 +36,33 @@ local Window = WindUI:CreateWindow({
         end,
     },
     
+    --       remove this all, 
+    -- !  ↓  if you DON'T need the key system
     KeySystem = { 
+        -- ↓ Optional. You can remove it.
         Key = { "#fire#hubx130key18722--KEYwalfy", "#fire#hubx130key18722--KEYwalfy" },
+        
         Note = "Example Key System.",
+        
+        -- ↓ Optional. You can remove it.
         Thumbnail = {
             Image = "rbxassetid://",
             Title = "FIAT HUB KEY SISTEN",
         },
+        
+        -- ↓ Optional. You can remove it.
         URL = "REAL",
-        SaveKey = true,
+        
+        -- ↓ Optional. You can remove it.
+        SaveKey = true, --  save and load the key.
+        
+        -- ↓ Optional. You can remove it.
+        -- API = {} ← Services. Read about it below ↓
     },
 })
 
 WindUI:GetTransparency(false)
+
 WindUI:GetWindowSize(52)
 
 -- Tab Auto Farm
@@ -56,6 +72,7 @@ local AutoFarmTab = Window:Tab({
     Locked = false,
 })
 
+-- Dropdown para seleção de tipo
 local FarmTypeDropdown = AutoFarmTab:Dropdown({
     Title = "Tipo de Farm",
     Desc = "Selecione o tipo de farm",
@@ -68,6 +85,7 @@ local FarmTypeDropdown = AutoFarmTab:Dropdown({
     end
 })
 
+-- Toggle Auto Farm (trancado inicialmente)
 local AutoFarmToggle = AutoFarmTab:Toggle({
     Title = "Auto Farm",
     Desc = "Ativa/Desativa o farm automático",
@@ -80,6 +98,7 @@ local AutoFarmToggle = AutoFarmTab:Toggle({
 })
 AutoFarmToggle:Lock()
 
+-- Botão Kill Aura
 local KillAuraButton = AutoFarmTab:Button({
     Title = "Kill Aura",
     Desc = "Ativa a kill aura",
@@ -105,12 +124,14 @@ local KillAuraButton = AutoFarmTab:Button({
                 local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
                 
                 if humanoidRootPart then
+                    -- Encontrar todos os humanoides próximos (não players)
                     for _, npc in ipairs(workspace:GetDescendants()) do
                         if npc:FindFirstChildOfClass("Humanoid") and not npc:FindFirstChildOfClass("Player") then
                             local npcHumanoid = npc:FindFirstChildOfClass("Humanoid")
                             local npcRoot = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("Torso")
                             
                             if npcRoot and (npcRoot.Position - humanoidRootPart.Position).Magnitude < 200 then
+                                -- Equipar a ferramenta correta baseada no dropdown
                                 local toolName = ""
                                 if selectedType == "fight" then
                                     toolName = "Fight/Melee"
@@ -120,6 +141,7 @@ local KillAuraButton = AutoFarmTab:Button({
                                     toolName = "Power/Powers"
                                 end
                                 
+                                -- Procurar e equipar a ferramenta
                                 for _, tool in ipairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
                                     if string.find(tool.Name:lower(), toolName:lower()) then
                                         game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):EquipTool(tool)
@@ -127,8 +149,10 @@ local KillAuraButton = AutoFarmTab:Button({
                                     end
                                 end
                                 
+                                -- Atacar o NPC
                                 game:GetService("RunService").Heartbeat:Wait()
                                 
+                                -- Se o NPC morrer, sair do loop
                                 if npcHumanoid.Health <= 0 then
                                     break
                                 end
@@ -151,6 +175,7 @@ local FruitTab = Window:Tab({
     Locked = false,
 })
 
+-- Dropdown para quantidade de giros
 local SpinAmountDropdown = FruitTab:Dropdown({
     Title = "Quantidade de Giros",
     Desc = "Selecione quantas vezes girar",
@@ -163,39 +188,87 @@ local SpinAmountDropdown = FruitTab:Dropdown({
     end
 })
 
+-- Botão Girar Fruta Money
 local SpinMoneyButton = FruitTab:Button({
     Title = "Girar Fruta (Money)",
     Desc = "Gira a roleta usando money",
     Locked = false,
     Callback = function()
         local selectedAmount = SpinAmountDropdown.Value[1]
-        local args = {
-            "Random_Power",
-            {
-                Type = selectedAmount == "1" and "Once" or (selectedAmount == "3" and "Triple" or "Decuple"),
-                NPCName = "Floppa Gacha",
-                GachaType = "Money"
+        
+        if selectedAmount == "1" then
+            local args = {
+                "Random_Power",
+                {
+                    Type = "Once",
+                    NPCName = "Floppa Gacha",
+                    GachaType = "Money"
+                }
             }
-        }
-        game:GetService("ReplicatedStorage"):WaitForChild("OtherEvent"):WaitForChild("MainEvents"):WaitForChild("Modules"):FireServer(unpack(args))
+            game:GetService("ReplicatedStorage"):WaitForChild("OtherEvent"):WaitForChild("MainEvents"):WaitForChild("Modules"):FireServer(unpack(args))
+        elseif selectedAmount == "3" then
+            local args = {
+                "Random_Power",
+                {
+                    Type = "Triple",
+                    NPCName = "Floppa Gacha",
+                    GachaType = "Money"
+                }
+            }
+            game:GetService("ReplicatedStorage"):WaitForChild("OtherEvent"):WaitForChild("MainEvents"):WaitForChild("Modules"):FireServer(unpack(args))
+        elseif selectedAmount == "10" then
+            local args = {
+                "Random_Power",
+                {
+                    Type = "Decuple",
+                    NPCName = "Floppa Gacha",
+                    GachaType = "Money"
+                }
+            }
+            game:GetService("ReplicatedStorage"):WaitForChild("OtherEvent"):WaitForChild("MainEvents"):WaitForChild("Modules"):FireServer(unpack(args))
+        end
     end
 })
 
+-- Botão Girar Fruta Gema
 local SpinGemButton = FruitTab:Button({
     Title = "Girar Fruta (Gema)",
     Desc = "Gira a roleta usando gemas",
     Locked = false,
     Callback = function()
         local selectedAmount = SpinAmountDropdown.Value[1]
-        local args = {
-            "Random_Power",
-            {
-                Type = selectedAmount == "1" and "Once" or (selectedAmount == "3" and "Triple" or "Decuple"),
-                NPCName = "Doge Gacha",
-                GachaType = "Gem"
+        
+        if selectedAmount == "1" then
+            local args = {
+                "Random_Power",
+                {
+                    Type = "Once",
+                    NPCName = "Doge Gacha",
+                    GachaType = "Gem"
+                }
             }
-        }
-        -- CORREÇÃO: Removi a aspa dupla extra no caminho
-        game:GetService("ReplicatedStorage"):WaitForChild("OtherEvent"):WaitForChild("MainEvents"):WaitForChild("Modules"):FireServer(unpack(args))
+            game:GetService("ReplicatedStorage"):WaitForChild("OtherEvent"):WaitForChild("MainEvents"):WaitForChild("Modules"):FireServer(unpack(args))
+        elseif selectedAmount == "3" then
+            local args = {
+                "Random_Power",
+                {
+                    Type = "Triple",
+                    NPCName = "Doge Gacha",
+                    GachaType = "Gem"
+                }
+            }
+            game:GetService("ReplicatedStorage"):WaitForChild("OtherEvent"):WaitForChild("MainEvents"):WaitForChild("Modules"):FireServer(unpack(args))
+        elseif selectedAmount == "10" then
+            local args = {
+                "Random_Power",
+                {
+                    Type = "Decuple",
+                    NPCName = "Doge Gacha",
+                    GachaType = "Gem"
+                }
+            }
+            -- CORREÇÃO 2: REMOVIDA A ASPA DUPLA EXTRA
+            game:GetService("ReplicatedStorage"):WaitForChild("OtherEvent"):WaitForChild("MainEvents"):WaitForChild("Modules"):FireServer(unpack(args))
+        end
     end
 })
