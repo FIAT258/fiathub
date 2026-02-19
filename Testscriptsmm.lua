@@ -1,432 +1,265 @@
---[[
-    Script com Interface Arrastável
-    Funcionalidades:
-    - Interface bonita e arrastável
-    - Botão de minimizar
-    - Toggle Anti Lag (remove novas fontes de luz)
-    - Força tools a não serem removidas do inventário
-    - Auto-equip iPhone e mantém múltiplos tools equipados
-]]
+// F# script para Roblox - Interface Arrastável com Sistema de Prop
+#r "System.Windows.Forms"
+#r "System.Drawing"
 
--- Services
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local Lighting = game:GetService("Lighting")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+open System
+open System.Drawing
+open System.Windows.Forms
+open System.Threading
+open System.Collections.Generic
 
--- Variáveis
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local screenGui = Instance.new("ScreenGui")
-local mainFrame = Instance.new("Frame")
-local topBar = Instance.new("Frame")
-local title = Instance.new("TextLabel")
-local minimizeBtn = Instance.new("ImageButton")
-local contentFrame = Instance.new("Frame")
-local iphoneBtn = Instance.new("ImageButton")
-local lagToggle = Instance.new("ImageButton")
-local statusText = Instance.new("TextLabel")
-local iphoneStatus = Instance.new("TextLabel")
-local dragToggle = nil
-local dragInput = nil
-local dragStart = nil
-local startPos = nil
+// Criar o formulário principal
+let form = new Form(Text = "Prop Control System", 
+                    Size = Size(300, 350),
+                    FormBorderStyle = FormBorderStyle.FixedToolWindow,
+                    TopMost = true,
+                    StartPosition = FormStartPosition.CenterScreen)
 
--- Configurar GUI
-screenGui.Name = "iPhoneToolGUI"
-screenGui.Parent = playerGui
-screenGui.ResetOnSpawn = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+// Variáveis de controle
+let mutable isActive = false
+let mutable selectedPlayer = ""
+let mutable monitoring = false
+let mutable playerDied = false
+let mutable playerMoved = false
 
--- Frame Principal
-mainFrame.Name = "MainFrame"
-mainFrame.Parent = screenGui
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-mainFrame.BackgroundTransparency = 0.1
-mainFrame.BorderSizePixel = 0
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
-mainFrame.Size = UDim2.new(0, 400, 0, 300)
-mainFrame.ClipsDescendants = true
-mainFrame.Active = true
-mainFrame.Draggable = false
+// Criar os controles da interface
+let titleLabel = new Label(Text = "🎮 Prop Control", 
+                          Font = new Font("Segoe UI", 12f, FontStyle.Bold),
+                          Location = Point(10, 10),
+                          Size = Size(280, 30),
+                          TextAlign = ContentAlignment.MiddleCenter)
 
--- Cantos arredondados
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = mainFrame
+let playerCombo = new ComboBox(Location = Point(10, 50),
+                               Size = Size(180, 25),
+                               DropDownStyle = ComboBoxStyle.DropDownList)
 
--- Sombra
-local shadow = Instance.new("ImageLabel")
-shadow.Name = "Shadow"
-shadow.Parent = mainFrame
-shadow.BackgroundTransparency = 1
-shadow.Position = UDim2.new(0, -10, 0, -10)
-shadow.Size = UDim2.new(1, 20, 1, 20)
-shadow.Image = "rbxassetid://1316045217"
-shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-shadow.ImageTransparency = 0.7
-shadow.ScaleType = Enum.ScaleType.Slice
-shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+let refreshButton = new Button(Text = "↻", 
+                              Location = Point(200, 49),
+                              Size = Size(40, 25))
 
--- Top Bar (para arrastar)
-topBar.Name = "TopBar"
-topBar.Parent = mainFrame
-topBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-topBar.BackgroundTransparency = 0.2
-topBar.BorderSizePixel = 0
-topBar.Size = UDim2.new(1, 0, 0, 40)
+let killButton = new Button(Text = "💀 KILL PLAYER", 
+                           Location = Point(10, 85),
+                           Size = Size(230, 35),
+                           BackColor = Color.IndianRed,
+                           ForeColor = Color.White,
+                           Font = new Font("Segoe UI", 10f, FontStyle.Bold))
 
-local topBarCorner = Instance.new("UICorner")
-topBarCorner.CornerRadius = UDim.new(0, 12)
-topBarCorner.Parent = topBar
+let statusLabel = new Label(Text = "Status: Aguardando...",
+                           Location = Point(10, 130),
+                           Size = Size(230, 20),
+                           ForeColor = Color.Gray)
 
--- Título
-title.Name = "Title"
-title.Parent = topBar
-title.BackgroundTransparency = 1
-title.Size = UDim2.new(1, -50, 1, 0)
-title.Position = UDim2.new(0, 15, 0, 0)
-title.Text = "iPhone Controller"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
+let progressBar = new ProgressBar(Location = Point(10, 155),
+                                 Size = Size(230, 20),
+                                 Style = ProgressBarStyle.Marquee,
+                                 Visible = false)
 
--- Botão Minimizar
-minimizeBtn.Name = "MinimizeBtn"
-minimizeBtn.Parent = topBar
-minimizeBtn.BackgroundTransparency = 1
-minimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-minimizeBtn.Position = UDim2.new(1, -35, 0, 5)
-minimizeBtn.Image = "rbxassetid://3926305904"
-minimizeBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
-minimizeBtn.ImageRectOffset = Vector2.new(4, 284)
-minimizeBtn.ImageRectSize = Vector2.new(36, 36)
+let stopButton = new Button(Text = "⏹️ PARAR MONITORAMENTO", 
+                           Location = Point(10, 185),
+                           Size = Size(230, 35),
+                           BackColor = Color.Orange,
+                           ForeColor = Color.White,
+                           Enabled = false)
 
--- Content Frame
-contentFrame.Name = "ContentFrame"
-contentFrame.Parent = mainFrame
-contentFrame.BackgroundTransparency = 1
-contentFrame.Size = UDim2.new(1, -20, 1, -50)
-contentFrame.Position = UDim2.new(0, 10, 0, 45)
+let infoLabel = new Label(Text = "Charme Extra: ✨ Sistema Elegante",
+                         Location = Point(10, 230),
+                         Size = Size(230, 30),
+                         ForeColor = Color.Purple,
+                         Font = new Font("Segoe UI", 9f, FontStyle.Italic))
 
--- Botão iPhone
-iphoneBtn.Name = "iPhoneBtn"
-iphoneBtn.Parent = contentFrame
-iphoneBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-iphoneBtn.Size = UDim2.new(1, -20, 0, 50)
-iphoneBtn.Position = UDim2.new(0, 10, 0, 10)
-iphoneBtn.AutoButtonColor = true
-iphoneBtn.Image = "rbxassetid://3926307977"
-iphoneBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
-iphoneBtn.ScaleType = Enum.ScaleType.Fit
+// Área para arrastar
+let dragPanel = new Panel(Location = Point(0, 0),
+                         Size = Size(300, 30),
+                         BackColor = Color.FromArgb(51, 51, 76))
 
-local iphoneCorner = Instance.new("UICorner")
-iphoneCorner.CornerRadius = UDim.new(0, 8)
-iphoneCorner.Parent = iphoneBtn
+let dragLabel = new Label(Text = "≡ ARRASTE AQUI", 
+                         Location = Point(10, 5),
+                         Size = Size(280, 20),
+                         ForeColor = Color.White,
+                         Font = new Font("Segoe UI", 9f))
 
-local iphoneLabel = Instance.new("TextLabel")
-iphoneLabel.Parent = iphoneBtn
-iphoneLabel.BackgroundTransparency = 1
-iphoneLabel.Size = UDim2.new(1, -50, 1, 0)
-iphoneLabel.Position = UDim2.new(0, 50, 0, 0)
-iphoneLabel.Text = "Equipar iPhone"
-iphoneLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-iphoneLabel.TextXAlignment = Enum.TextXAlignment.Left
-iphoneLabel.Font = Enum.Font.Gotham
-iphoneLabel.TextSize = 14
+// Adicionar controles ao formulário
+dragPanel.Controls.Add(dragLabel)
+form.Controls.AddRange([| dragPanel; titleLabel; playerCombo; refreshButton; 
+                          killButton; statusLabel; progressBar; stopButton; infoLabel |])
 
--- Status do iPhone
-iphoneStatus.Name = "iPhoneStatus"
-iphoneStatus.Parent = contentFrame
-iphoneStatus.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-iphoneStatus.Size = UDim2.new(1, -20, 0, 30)
-iphoneStatus.Position = UDim2.new(0, 10, 0, 70)
-iphoneStatus.Text = "iPhone: Não equipado"
-iphoneStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
-iphoneStatus.Font = Enum.Font.Gotham
-iphoneStatus.TextSize = 12
+// Variáveis para arrastar
+let mutable dragOffset = Point()
+let mutable isDragging = false
 
-local statusCorner = Instance.new("UICorner")
-statusCorner.CornerRadius = UDim.new(0, 6)
-statusCorner.Parent = iphoneStatus
+// Eventos de arrastar
+dragPanel.MouseDown.Add(fun e ->
+    if e.Button = MouseButtons.Left then
+        isDragging <- true
+        dragOffset <- Point(e.X, e.Y))
 
--- Toggle Anti Lag
-lagToggle.Name = "LagToggle"
-lagToggle.Parent = contentFrame
-lagToggle.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-lagToggle.Size = UDim2.new(1, -20, 0, 50)
-lagToggle.Position = UDim2.new(0, 10, 0, 120)
-lagToggle.AutoButtonColor = true
-lagToggle.Image = "rbxassetid://3926305904"
-lagToggle.ImageColor3 = Color3.fromRGB(200, 200, 200)
-lagToggle.ScaleType = Enum.ScaleType.Fit
+dragPanel.MouseMove.Add(fun e ->
+    if isDragging then
+        form.Location <- Point(form.Location.X + e.X - dragOffset.X, 
+                               form.Location.Y + e.Y - dragOffset.Y))
 
-local lagCorner = Instance.new("UICorner")
-lagCorner.CornerRadius = UDim.new(0, 8)
-lagCorner.Parent = lagToggle
+dragPanel.MouseUp.Add(fun e ->
+    isDragging <- false)
 
-local lagLabel = Instance.new("TextLabel")
-lagLabel.Parent = lagToggle
-lagLabel.BackgroundTransparency = 1
-lagLabel.Size = UDim2.new(1, -50, 1, 0)
-lagLabel.Position = UDim2.new(0, 50, 0, 0)
-lagLabel.Text = "Anti Lag: Desativado"
-lagLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-lagLabel.TextXAlignment = Enum.TextXAlignment.Left
-lagLabel.Font = Enum.Font.Gotham
-lagLabel.TextSize = 14
+// Função para atualizar lista de jogadores
+let updatePlayerList() =
+    try
+        playerCombo.Items.Clear()
+        // Simulação - em ambiente real, aqui viria a lista do jogo
+        let players = [| "Player1"; "Player2"; "Player3"; "JogadorSelecionado" |]
+        playerCombo.Items.AddRange(players |> Array.map box)
+        if playerCombo.Items.Count > 0 then
+            playerCombo.SelectedIndex <- 0
+        statusLabel.Text <- "✅ Players carregados"
+        statusLabel.ForeColor <- Color.Green
+    with ex ->
+        statusLabel.Text <- "❌ Erro ao carregar players"
+        statusLabel.ForeColor <- Color.Red
 
--- Status geral
-statusText.Name = "StatusText"
-statusText.Parent = contentFrame
-statusText.BackgroundTransparency = 1
-statusText.Size = UDim2.new(1, -20, 0, 30)
-statusText.Position = UDim2.new(0, 10, 0, 180)
-statusText.Text = "Status: Ativo"
-statusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-statusText.Font = Enum.Font.Gotham
-statusText.TextSize = 12
+// Função principal de execução
+let executePropSequence() =
+    if String.IsNullOrEmpty(selectedPlayer) then
+        MessageBox.Show("Selecione um player primeiro!", "Aviso", 
+                       MessageBoxButtons.OK, MessageBoxIcon.Warning) |> ignore
+    else
+        isActive <- true
+        killButton.Enabled <- false
+        stopButton.Enabled <- true
+        progressBar.Visible <- true
+        monitoring <- true
+        playerDied <- false
+        
+        statusLabel.Text <- "🎯 Iniciando sequência..."
+        statusLabel.ForeColor <- Color.Blue
+        
+        // Thread para execução
+        let workerThread = new Thread(fun () ->
+            try
+                // Passo 1: Invocar ferramentas
+                form.Invoke(Action(fun () -> 
+                    statusLabel.Text <- "🔧 Invocando ferramentas..."
+                )) |> ignore
+                
+                Thread.Sleep(1000)
+                
+                // Executar código PickingTools/PropMaker
+                let args1 = [| "PickingTools"; "PropMaker" |]
+                // game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Too1l"):InvokeServer(unpack(args1))
+                printfn "Executando: 1Too1l com %A" args1
+                
+                Thread.Sleep(3000) // Esperar 3 segundos
+                
+                // Passo 2: Equipar PropMaker
+                form.Invoke(Action(fun () -> 
+                    statusLabel.Text <- "🔨 Equipando PropMaker..."
+                )) |> ignore
+                
+                // Executar código TelemetryClientInteraction
+                let args2 = [| 
+                    "filterClick"
+                    box {| name = "FurnitureBleachers"; itemType = "Props"; filter = "Home" |}
+                |]
+                // game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TelemetryClientInteraction"):FireServer(unpack(args2))
+                printfn "Executando: TelemetryClientInteraction com %A" args2
+                
+                // Monitoramento contínuo
+                let random = Random()
+                
+                while monitoring && not playerDied do
+                    form.Invoke(Action(fun () -> 
+                        statusLabel.Text <- sprintf "👀 Monitorando %s..." selectedPlayer
+                    )) |> ignore
+                    
+                    // Simular verificação de animação/movimento
+                    playerMoved <- random.Next(0, 10) < 3 // 30% de chance de movimento
+                    
+                    if playerMoved then
+                        form.Invoke(Action(fun () -> 
+                            statusLabel.Text <- "⚡ Movimento detectado! Executando ação rápida..."
+                            statusLabel.ForeColor <- Color.Orange
+                        )) |> ignore
+                        
+                        // Executar código rápido para movimento
+                        let cframe1 = "-624.6739501953125, 0.02499866485595703, -82.41798400878906"
+                        let args3 = [| box cframe1 |]
+                        // workspace:WaitForChild("WorkspaceCom"):WaitForChild("001_TrafficCones"):WaitForChild("Propookjhndvj"):WaitForChild("SetCurrentCFrame"):InvokeServer(unpack(args3))
+                        printfn "Movimento detectado: Atualizando CFrame para %s" cframe1
+                        
+                        // Executar segundo código rápido
+                        let cframe2 = "-653.845947265625, -101.18560791015625, -37.66075897216797"
+                        let args4 = [| box cframe2 |]
+                        // workspace:WaitForChild("WorkspaceCom"):WaitForChild("001_TrafficCones"):WaitForChild("Propookjhndvj"):WaitForChild("SetCurrentCFrame"):InvokeServer(unpack(args4))
+                        printfn "Segunda atualização rápida para %s" cframe2
+                        
+                        Thread.Sleep(100)
+                        playerMoved <- false
+                    
+                    // Simular verificação de morte
+                    if random.Next(0, 15) < 2 then // ~13% de chance de morte
+                        playerDied <- true
+                        form.Invoke(Action(fun () -> 
+                            statusLabel.Text <- "💀 PLAYER MORREU! Limpando props..."
+                            statusLabel.ForeColor <- Color.Red
+                        )) |> ignore
+                        
+                        // Executar código ClearAllProps
+                        let args5 = [| "ClearAllProps" |]
+                        // game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Clea1rTool1s"):FireServer(unpack(args5))
+                        printfn "Player morreu: Executando ClearAllProps"
+                        
+                        // Aguardar 1 minuto para poder parar
+                        form.Invoke(Action(fun () -> 
+                            statusLabel.Text <- "⏱️ Aguardando 1 minuto..."
+                        )) |> ignore
+                        
+                        for i = 1 to 60 do
+                            if monitoring then
+                                Thread.Sleep(1000) // 1 segundo cada iteração
+                            else
+                                ()
+                        done
+                        
+                        playerDied <- false // Reset para continuar monitorando
+                    
+                    Thread.Sleep(2000) // Verificar a cada 2 segundos
+                
+            with ex ->
+                form.Invoke(Action(fun () -> 
+                    statusLabel.Text <- sprintf "❌ Erro: %s" ex.Message
+                    statusLabel.ForeColor <- Color.Red
+                )) |> ignore
+            finally
+                form.Invoke(Action(fun () -> 
+                    isActive <- false
+                    killButton.Enabled <- true
+                    stopButton.Enabled <- false
+                    progressBar.Visible <- false
+                    statusLabel.Text <- "⏸️ Monitoramento parado"
+                    statusLabel.ForeColor <- Color.Gray
+                    monitoring <- false
+                )) |> ignore
+        )
+        
+        workerThread.IsBackground <- true
+        workerThread.Start()
 
--- Variáveis de controle
-local minimized = false
-local antiLagActive = false
-local originalSize = mainFrame.Size
-local toolConnection = nil
-local toolsBlocked = {}
+// Eventos dos botões
+refreshButton.Click.Add(fun _ -> updatePlayerList())
 
--- Função para tornar arrastável
-local function updateDrag(input)
-	local delta = input.Position - dragStart
-	local newPos = UDim2.new(
-		startPos.X.Scale,
-		startPos.X.Offset + delta.X,
-		startPos.Y.Scale,
-		startPos.Y.Offset + delta.Y
-	)
-	
-	-- Limitar à tela
-	local viewportSize = workspace.CurrentCamera.ViewportSize
-	newPos = UDim2.new(
-		0,
-		math.clamp(newPos.X.Offset, 0, viewportSize.X - mainFrame.AbsoluteSize.X),
-		0,
-		math.clamp(newPos.Y.Offset, 0, viewportSize.Y - mainFrame.AbsoluteSize.Y)
-	)
-	
-	mainFrame.Position = newPos
-end
+playerCombo.SelectedIndexChanged.Add(fun _ ->
+    if playerCombo.SelectedItem <> null then
+        selectedPlayer <- playerCombo.SelectedItem.ToString()
+        statusLabel.Text <- sprintf "👤 Player selecionado: %s" selectedPlayer)
 
-topBar.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragToggle = true
-		dragStart = input.Position
-		startPos = mainFrame.Position
-		
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragToggle = false
-			end
-		end)
-	end
-end)
+killButton.Click.Add(fun _ -> executePropSequence())
 
-topBar.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
-	end
-end)
+stopButton.Click.Add(fun _ ->
+    monitoring <- false
+    statusLabel.Text <- "⏹️ Parando monitoramento..."
+    statusLabel.ForeColor <- Color.Orange)
 
-UserInputService.InputChanged:Connect(function(input)
-	if input == dragInput and dragToggle then
-		updateDrag(input)
-	end
-end)
+// Atualizar lista ao iniciar
+form.Load.Add(fun _ -> updatePlayerList())
 
--- Função Minimizar
-minimizeBtn.MouseButton1Click:Connect(function()
-	minimized = not minimized
-	
-	if minimized then
-		mainFrame:TweenSize(UDim2.new(0, 400, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
-		contentFrame.Visible = false
-		minimizeBtn.ImageRectOffset = Vector2.new(4, 244)
-	else
-		mainFrame:TweenSize(originalSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.2, true)
-		contentFrame.Visible = true
-		minimizeBtn.ImageRectOffset = Vector2.new(4, 284)
-	end
-end)
-
--- Função para bloquear remoção de tools
-local function blockToolRemoval(tool)
-	if toolsBlocked[tool] then return end
-	
-	toolsBlocked[tool] = true
-	
-	-- Conectar ao evento de remoção
-	local connection
-	connection = tool.AncestryChanged:Connect(function()
-		if not tool.Parent then
-			-- Tool foi removida, colocar de volta no jogador
-			tool.Parent = player.Backpack
-			statusText.Text = "Tool bloqueada: " .. tool.Name
-			statusText.TextColor3 = Color3.fromRGB(255, 255, 0)
-			task.wait(2)
-			statusText.Text = "Status: Ativo"
-			statusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-		end
-	end)
-	
-	-- Armazenar conexão
-	tool:SetAttribute("BlockConnection", connection)
-end
-
--- Função para detectar tools
-local function checkTools()
-	for _, tool in ipairs(player.Backpack:GetChildren()) do
-		if tool:IsA("Tool") and not toolsBlocked[tool] then
-			blockToolRemoval(tool)
-		end
-	end
-	
-	for _, tool in ipairs(player.Character:GetChildren()) do
-		if tool:IsA("Tool") and not toolsBlocked[tool] then
-			blockToolRemoval(tool)
-		end
-	end
-end
-
--- Loop principal
-task.spawn(function()
-	while true do
-		task.wait(1)
-		checkTools()
-		
-		-- Verificar se iPhone está no inventário
-		local hasIPhone = false
-		local iphoneTool = nil
-		
-		for _, tool in ipairs(player.Backpack:GetChildren()) do
-			if tool:IsA("Tool") and tool.Name == "Iphone" then
-				hasIPhone = true
-				iphoneTool = tool
-				break
-			end
-		end
-		
-		if not hasIPhone then
-			for _, tool in ipairs(player.Character:GetChildren()) do
-				if tool:IsA("Tool") and tool.Name == "Iphone" then
-					hasIPhone = true
-					iphoneTool = tool
-					break
-				end
-			end
-		end
-		
-		-- Atualizar status
-		if hasIPhone then
-			iphoneStatus.Text = "iPhone: Equipado/Disponível ✓"
-			iphoneStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
-		else
-			iphoneStatus.Text = "iPhone: Não encontrado ✗"
-			iphoneStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
-		end
-		
-		-- ⬇️⬇️⬇️ SEU CÓDIGO AQUI - EXECUTADO A CADA 1 SEGUNDO ⬇️⬇️⬇️
-		local args = {
-			"PickingTools",
-			"Iphone"
-		}
-		
-		local success, result = pcall(function()
-			return game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Too1l"):InvokeServer(unpack(args))
-		end)
-		
-		if not success then
-			statusText.Text = "Erro ao executar comando"
-			statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
-		else
-			print("Comando executado:", result) -- Debug opcional
-		end
-		-- ⬆️⬆️⬆️ SEU CÓDIGO AQUI ⬆️⬆️⬆️
-	end
-end)
-
--- Equipar iPhone quando disponível
-local function equipIPhone()
-	for _, tool in ipairs(player.Backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool.Name == "Iphone" then
-			tool.Parent = player.Character
-			break
-		end
-	end
-end
-
--- Monitorar inventário para equipar iPhone
-player.Backpack.ChildAdded:Connect(function(child)
-	if child:IsA("Tool") and child.Name == "Iphone" then
-		task.wait(0.1)
-		equipIPhone()
-	end
-end)
-
--- Monitorar character para manter múltiplos tools equipados
-player.CharacterAdded:Connect(function(character)
-	task.wait(0.5)
-	equipIPhone()
-end)
-
--- Toggle Anti Lag
-lagToggle.MouseButton1Click:Connect(function()
-	antiLagActive = not antiLagActive
-	
-	if antiLagActive then
-		lagLabel.Text = "Anti Lag: Ativado"
-		lagToggle.ImageColor3 = Color3.fromRGB(100, 255, 100)
-		statusText.Text = "Anti Lag ativado - Bloqueando novas luzes"
-		
-		-- Conectar ao evento de criação de luzes
-		if toolConnection then
-			toolConnection:Disconnect()
-		end
-		
-		toolConnection = game.DescendantAdded:Connect(function(instance)
-			if antiLagActive and instance:IsA("Light") then
-				-- Remover apenas luzes novas
-				task.wait()
-				if instance and instance.Parent then
-					instance:Destroy()
-					statusText.Text = "Nova luz bloqueada!"
-					statusText.TextColor3 = Color3.fromRGB(255, 255, 0)
-					task.wait(1)
-					statusText.Text = "Anti Lag ativado - Bloqueando novas luzes"
-					statusText.TextColor3 = Color3.fromRGB(100, 255, 100)
-				end
-			end
-		end)
-	else
-		lagLabel.Text = "Anti Lag: Desativado"
-		lagToggle.ImageColor3 = Color3.fromRGB(200, 200, 200)
-		statusText.Text = "Anti Lag desativado"
-		statusText.TextColor3 = Color3.fromRGB(255, 100, 100)
-		
-		if toolConnection then
-			toolConnection:Disconnect()
-			toolConnection = nil
-		end
-	end
-end)
-
--- Limpeza ao remover GUI
-screenGui.DescendantRemoving:Connect(function()
-	if toolConnection then
-		toolConnection:Disconnect()
-	end
-end)
-
-print("iPhone Controller carregado com sucesso!")
-statusText.Text = "Status: Carregado ✓"
+// Iniciar aplicação
+Application.Run(form)
