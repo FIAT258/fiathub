@@ -1,265 +1,326 @@
-// F# script para Roblox - Interface Arrastável com Sistema de Prop
-#r "System.Windows.Forms"
-#r "System.Drawing"
+-- Interface arrastável com sistema de props
+local player = game:GetService("Players").LocalPlayer
+local mouse = player:GetMouse()
+local gui = Instance.new("ScreenGui")
+local frame = Instance.new("Frame")
+local dragBar = Instance.new("Frame")
+local title = Instance.new("TextLabel")
+local playerDropdown = Instance.new("TextButton") -- Vai abrir a lista
+local killButton = Instance.new("TextButton")
+local statusLabel = Instance.new("TextLabel")
+local stopButton = Instance.new("TextButton")
+local playerListFrame = Instance.new("Frame")
+local selectedPlayer = nil
+local monitoring = false
+local playerDied = false
 
-open System
-open System.Drawing
-open System.Windows.Forms
-open System.Threading
-open System.Collections.Generic
+-- Configurar GUI
+gui.Name = "PropControlGUI"
+gui.Parent = player:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
 
-// Criar o formulário principal
-let form = new Form(Text = "Prop Control System", 
-                    Size = Size(300, 350),
-                    FormBorderStyle = FormBorderStyle.FixedToolWindow,
-                    TopMost = true,
-                    StartPosition = FormStartPosition.CenterScreen)
+-- Frame principal
+frame.Name = "MainFrame"
+frame.Parent = gui
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+frame.BorderSizePixel = 0
+frame.Position = UDim2.new(0.5, -150, 0.5, -175)
+frame.Size = UDim2.new(0, 300, 0, 350)
+frame.Active = true
+frame.Draggable = true
+frame.Selectable = true
 
-// Variáveis de controle
-let mutable isActive = false
-let mutable selectedPlayer = ""
-let mutable monitoring = false
-let mutable playerDied = false
-let mutable playerMoved = false
+-- Barra de arrasto
+dragBar.Name = "DragBar"
+dragBar.Parent = frame
+dragBar.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+dragBar.BorderSizePixel = 0
+dragBar.Size = UDim2.new(1, 0, 0, 30)
+dragBar.Active = true
 
-// Criar os controles da interface
-let titleLabel = new Label(Text = "🎮 Prop Control", 
-                          Font = new Font("Segoe UI", 12f, FontStyle.Bold),
-                          Location = Point(10, 10),
-                          Size = Size(280, 30),
-                          TextAlign = ContentAlignment.MiddleCenter)
+-- Título
+title.Name = "Title"
+title.Parent = dragBar
+title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+title.BackgroundTransparency = 1
+title.Size = UDim2.new(1, 0, 1, 0)
+title.Font = Enum.Font.GothamBold
+title.Text = "🎮 Prop Control"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 14
 
-let playerCombo = new ComboBox(Location = Point(10, 50),
-                               Size = Size(180, 25),
-                               DropDownStyle = ComboBoxStyle.DropDownList)
+-- Dropdown personalizado
+playerDropdown.Name = "PlayerDropdown"
+playerDropdown.Parent = frame
+playerDropdown.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
+playerDropdown.Position = UDim2.new(0, 10, 0, 40)
+playerDropdown.Size = UDim2.new(0, 230, 0, 30)
+playerDropdown.Font = Enum.Font.Gotham
+playerDropdown.Text = "📋 Selecionar Player"
+playerDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+playerDropdown.TextSize = 14
 
-let refreshButton = new Button(Text = "↻", 
-                              Location = Point(200, 49),
-                              Size = Size(40, 25))
+-- Frame da lista de players
+playerListFrame.Name = "PlayerList"
+playerListFrame.Parent = frame
+playerListFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+playerListFrame.BorderSizePixel = 0
+playerListFrame.Position = UDim2.new(0, 10, 0, 71)
+playerListFrame.Size = UDim2.new(0, 230, 0, 120)
+playerListFrame.Visible = false
+playerListFrame.ZIndex = 10
 
-let killButton = new Button(Text = "💀 KILL PLAYER", 
-                           Location = Point(10, 85),
-                           Size = Size(230, 35),
-                           BackColor = Color.IndianRed,
-                           ForeColor = Color.White,
-                           Font = new Font("Segoe UI", 10f, FontStyle.Bold))
+-- Botão Kill
+killButton.Name = "KillButton"
+killButton.Parent = frame
+killButton.BackgroundColor3 = Color3.fromRGB(180, 70, 70)
+killButton.Position = UDim2.new(0, 10, 0, 200)
+killButton.Size = UDim2.new(0, 230, 0, 35)
+killButton.Font = Enum.Font.GothamBold
+killButton.Text = "💀 KILL PLAYER"
+killButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+killButton.TextSize = 14
 
-let statusLabel = new Label(Text = "Status: Aguardando...",
-                           Location = Point(10, 130),
-                           Size = Size(230, 20),
-                           ForeColor = Color.Gray)
+-- Status
+statusLabel.Name = "StatusLabel"
+statusLabel.Parent = frame
+statusLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Position = UDim2.new(0, 10, 0, 245)
+statusLabel.Size = UDim2.new(0, 230, 0, 20)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.Text = "Status: Aguardando..."
+statusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+statusLabel.TextSize = 12
 
-let progressBar = new ProgressBar(Location = Point(10, 155),
-                                 Size = Size(230, 20),
-                                 Style = ProgressBarStyle.Marquee,
-                                 Visible = false)
+-- Botão Stop
+stopButton.Name = "StopButton"
+stopButton.Parent = frame
+stopButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+stopButton.Position = UDim2.new(0, 10, 0, 275)
+stopButton.Size = UDim2.new(0, 230, 0, 35)
+stopButton.Font = Enum.Font.GothamBold
+stopButton.Text = "⏹️ PARAR MONITORAMENTO"
+stopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+stopButton.TextSize = 12
+stopButton.Visible = false
 
-let stopButton = new Button(Text = "⏹️ PARAR MONITORAMENTO", 
-                           Location = Point(10, 185),
-                           Size = Size(230, 35),
-                           BackColor = Color.Orange,
-                           ForeColor = Color.White,
-                           Enabled = false)
+-- Charme extra
+local charmLabel = Instance.new("TextLabel")
+charmLabel.Parent = frame
+charmLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+charmLabel.BackgroundTransparency = 1
+charmLabel.Position = UDim2.new(0, 10, 0, 315)
+charmLabel.Size = UDim2.new(0, 230, 0, 25)
+charmLabel.Font = Enum.Font.Gotham
+charmLabel.Text = "✨ Pequeno charme especial ✨"
+charmLabel.TextColor3 = Color3.fromRGB(180, 130, 255)
+charmLabel.TextSize = 11
 
-let infoLabel = new Label(Text = "Charme Extra: ✨ Sistema Elegante",
-                         Location = Point(10, 230),
-                         Size = Size(230, 30),
-                         ForeColor = Color.Purple,
-                         Font = new Font("Segoe UI", 9f, FontStyle.Italic))
+-- Função para atualizar lista de players
+local function updatePlayerList()
+    -- Limpar lista anterior
+    for _, child in ipairs(playerListFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    -- Adicionar players atuais
+    local yPos = 0
+    for _, plr in ipairs(game:GetService("Players"):GetPlayers()) do
+        if plr ~= player then
+            local playerButton = Instance.new("TextButton")
+            playerButton.Name = "Player_" .. plr.Name
+            playerButton.Parent = playerListFrame
+            playerButton.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
+            playerButton.BorderSizePixel = 0
+            playerButton.Position = UDim2.new(0, 0, 0, yPos)
+            playerButton.Size = UDim2.new(1, 0, 0, 25)
+            playerButton.Font = Enum.Font.Gotham
+            playerButton.Text = plr.Name
+            playerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            playerButton.TextSize = 12
+            playerButton.ZIndex = 11
+            
+            playerButton.MouseButton1Click:Connect(function()
+                selectedPlayer = plr
+                playerDropdown.Text = "👤 " .. plr.Name
+                playerListFrame.Visible = false
+                statusLabel.Text = "Player selecionado: " .. plr.Name
+                statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+            end)
+            
+            yPos = yPos + 25
+        end
+    end
+    
+    -- Ajustar altura do frame
+    playerListFrame.Size = UDim2.new(0, 230, 0, yPos)
+end
 
-// Área para arrastar
-let dragPanel = new Panel(Location = Point(0, 0),
-                         Size = Size(300, 30),
-                         BackColor = Color.FromArgb(51, 51, 76))
+-- Toggle da lista de players
+playerDropdown.MouseButton1Click:Connect(function()
+    playerListFrame.Visible = not playerListFrame.Visible
+    if playerListFrame.Visible then
+        updatePlayerList()
+    end
+end)
 
-let dragLabel = new Label(Text = "≡ ARRASTE AQUI", 
-                         Location = Point(10, 5),
-                         Size = Size(280, 20),
-                         ForeColor = Color.White,
-                         Font = new Font("Segoe UI", 9f))
-
-// Adicionar controles ao formulário
-dragPanel.Controls.Add(dragLabel)
-form.Controls.AddRange([| dragPanel; titleLabel; playerCombo; refreshButton; 
-                          killButton; statusLabel; progressBar; stopButton; infoLabel |])
-
-// Variáveis para arrastar
-let mutable dragOffset = Point()
-let mutable isDragging = false
-
-// Eventos de arrastar
-dragPanel.MouseDown.Add(fun e ->
-    if e.Button = MouseButtons.Left then
-        isDragging <- true
-        dragOffset <- Point(e.X, e.Y))
-
-dragPanel.MouseMove.Add(fun e ->
-    if isDragging then
-        form.Location <- Point(form.Location.X + e.X - dragOffset.X, 
-                               form.Location.Y + e.Y - dragOffset.Y))
-
-dragPanel.MouseUp.Add(fun e ->
-    isDragging <- false)
-
-// Função para atualizar lista de jogadores
-let updatePlayerList() =
-    try
-        playerCombo.Items.Clear()
-        // Simulação - em ambiente real, aqui viria a lista do jogo
-        let players = [| "Player1"; "Player2"; "Player3"; "JogadorSelecionado" |]
-        playerCombo.Items.AddRange(players |> Array.map box)
-        if playerCombo.Items.Count > 0 then
-            playerCombo.SelectedIndex <- 0
-        statusLabel.Text <- "✅ Players carregados"
-        statusLabel.ForeColor <- Color.Green
-    with ex ->
-        statusLabel.Text <- "❌ Erro ao carregar players"
-        statusLabel.ForeColor <- Color.Red
-
-// Função principal de execução
-let executePropSequence() =
-    if String.IsNullOrEmpty(selectedPlayer) then
-        MessageBox.Show("Selecione um player primeiro!", "Aviso", 
-                       MessageBoxButtons.OK, MessageBoxIcon.Warning) |> ignore
-    else
-        isActive <- true
-        killButton.Enabled <- false
-        stopButton.Enabled <- true
-        progressBar.Visible <- true
-        monitoring <- true
-        playerDied <- false
+-- Fechar lista quando clicar fora
+mouse.Button1Down:Connect(function()
+    wait()
+    if playerListFrame.Visible then
+        local mousePos = Vector2.new(mouse.X, mouse.Y)
+        local absPos = playerListFrame.AbsolutePosition
+        local absSize = playerListFrame.AbsoluteSize
         
-        statusLabel.Text <- "🎯 Iniciando sequência..."
-        statusLabel.ForeColor <- Color.Blue
+        if mousePos.X < absPos.X or mousePos.X > absPos.X + absSize.X or
+           mousePos.Y < absPos.Y or mousePos.Y > absPos.Y + absSize.Y then
+            playerListFrame.Visible = false
+        end
+    end
+end)
+
+-- Funções principais
+local function executeFirstSequence()
+    if not selectedPlayer then
+        statusLabel.Text = "❌ Selecione um player primeiro!"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        return
+    end
+    
+    monitoring = true
+    killButton.Visible = false
+    stopButton.Visible = true
+    playerDied = false
+    
+    statusLabel.Text = "🎯 Iniciando sequência..."
+    statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+    
+    -- Primeiro código
+    local args1 = {
+        "PickingTools",
+        "PropMaker"
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Too1l"):InvokeServer(unpack(args1))
+    
+    wait(3) -- Aguardar 3 segundos
+    
+    -- Segundo código
+    local args2 = {
+        "filterClick",
+        {
+            name = "FurnitureBleachers",
+            itemType = "Props",
+            filter = "Home"
+        }
+    }
+    game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TelemetryClientInteraction"):FireServer(unpack(args2))
+    
+    statusLabel.Text = "🔧 Monitorando " .. selectedPlayer.Name .. "..."
+    statusLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+    
+    -- Iniciar monitoramento
+    monitorPlayer()
+end
+
+local function monitorPlayer()
+    spawn(function()
+        while monitoring and not playerDied do
+            -- Verificar se player ainda existe
+            if not selectedPlayer or not selectedPlayer.Parent then
+                statusLabel.Text = "❌ Player desconectou"
+                statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                break
+            end
+            
+            -- Verificar animação ou movimento (simulado)
+            local character = selectedPlayer.Character
+            if character then
+                local humanoid = character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    -- Se player está sentado ou fazendo animação
+                    if humanoid.Sit or humanoid.MoveDirection.Magnitude > 0 then
+                        -- Executar código rápido de movimento
+                        local args3 = {
+                            CFrame.new(-653.845947265625, -101.18560791015625, -37.66075897216797)
+                        }
+                        workspace:WaitForChild("WorkspaceCom"):WaitForChild("001_TrafficCones"):WaitForChild("Propookjhndvj"):WaitForChild("SetCurrentCFrame"):InvokeServer(unpack(args3))
+                        
+                        statusLabel.Text = "⚡ Movimento detectado!"
+                        statusLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+                    end
+                end
+                
+                -- Verificar se morreu
+                if not character or not character:FindFirstChildOfClass("Humanoid") or 
+                   character.Humanoid.Health <= 0 then
+                    playerDied = true
+                    
+                    -- Executar código de limpeza
+                    local args4 = {
+                        "ClearAllProps"
+                    }
+                    game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Clea1rTool1s"):FireServer(unpack(args4))
+                    
+                    statusLabel.Text = "💀 Player morreu! Limpando props..."
+                    statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+                    
+                    -- Aguardar 1 minuto
+                    for i = 1, 60 do
+                        if not monitoring then break end
+                        statusLabel.Text = "⏱️ Aguardando: " .. (60 - i) .. "s"
+                        wait(1)
+                    end
+                    
+                    if monitoring then
+                        playerDied = false -- Reset para continuar
+                        statusLabel.Text = "🔄 Reiniciando monitoramento..."
+                        statusLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+                    end
+                end
+            end
+            
+            wait(2) -- Verificar a cada 2 segundos
+        end
         
-        // Thread para execução
-        let workerThread = new Thread(fun () ->
-            try
-                // Passo 1: Invocar ferramentas
-                form.Invoke(Action(fun () -> 
-                    statusLabel.Text <- "🔧 Invocando ferramentas..."
-                )) |> ignore
-                
-                Thread.Sleep(1000)
-                
-                // Executar código PickingTools/PropMaker
-                let args1 = [| "PickingTools"; "PropMaker" |]
-                // game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Too1l"):InvokeServer(unpack(args1))
-                printfn "Executando: 1Too1l com %A" args1
-                
-                Thread.Sleep(3000) // Esperar 3 segundos
-                
-                // Passo 2: Equipar PropMaker
-                form.Invoke(Action(fun () -> 
-                    statusLabel.Text <- "🔨 Equipando PropMaker..."
-                )) |> ignore
-                
-                // Executar código TelemetryClientInteraction
-                let args2 = [| 
-                    "filterClick"
-                    box {| name = "FurnitureBleachers"; itemType = "Props"; filter = "Home" |}
-                |]
-                // game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("TelemetryClientInteraction"):FireServer(unpack(args2))
-                printfn "Executando: TelemetryClientInteraction com %A" args2
-                
-                // Monitoramento contínuo
-                let random = Random()
-                
-                while monitoring && not playerDied do
-                    form.Invoke(Action(fun () -> 
-                        statusLabel.Text <- sprintf "👀 Monitorando %s..." selectedPlayer
-                    )) |> ignore
-                    
-                    // Simular verificação de animação/movimento
-                    playerMoved <- random.Next(0, 10) < 3 // 30% de chance de movimento
-                    
-                    if playerMoved then
-                        form.Invoke(Action(fun () -> 
-                            statusLabel.Text <- "⚡ Movimento detectado! Executando ação rápida..."
-                            statusLabel.ForeColor <- Color.Orange
-                        )) |> ignore
-                        
-                        // Executar código rápido para movimento
-                        let cframe1 = "-624.6739501953125, 0.02499866485595703, -82.41798400878906"
-                        let args3 = [| box cframe1 |]
-                        // workspace:WaitForChild("WorkspaceCom"):WaitForChild("001_TrafficCones"):WaitForChild("Propookjhndvj"):WaitForChild("SetCurrentCFrame"):InvokeServer(unpack(args3))
-                        printfn "Movimento detectado: Atualizando CFrame para %s" cframe1
-                        
-                        // Executar segundo código rápido
-                        let cframe2 = "-653.845947265625, -101.18560791015625, -37.66075897216797"
-                        let args4 = [| box cframe2 |]
-                        // workspace:WaitForChild("WorkspaceCom"):WaitForChild("001_TrafficCones"):WaitForChild("Propookjhndvj"):WaitForChild("SetCurrentCFrame"):InvokeServer(unpack(args4))
-                        printfn "Segunda atualização rápida para %s" cframe2
-                        
-                        Thread.Sleep(100)
-                        playerMoved <- false
-                    
-                    // Simular verificação de morte
-                    if random.Next(0, 15) < 2 then // ~13% de chance de morte
-                        playerDied <- true
-                        form.Invoke(Action(fun () -> 
-                            statusLabel.Text <- "💀 PLAYER MORREU! Limpando props..."
-                            statusLabel.ForeColor <- Color.Red
-                        )) |> ignore
-                        
-                        // Executar código ClearAllProps
-                        let args5 = [| "ClearAllProps" |]
-                        // game:GetService("ReplicatedStorage"):WaitForChild("RE"):WaitForChild("1Clea1rTool1s"):FireServer(unpack(args5))
-                        printfn "Player morreu: Executando ClearAllProps"
-                        
-                        // Aguardar 1 minuto para poder parar
-                        form.Invoke(Action(fun () -> 
-                            statusLabel.Text <- "⏱️ Aguardando 1 minuto..."
-                        )) |> ignore
-                        
-                        for i = 1 to 60 do
-                            if monitoring then
-                                Thread.Sleep(1000) // 1 segundo cada iteração
-                            else
-                                ()
-                        done
-                        
-                        playerDied <- false // Reset para continuar monitorando
-                    
-                    Thread.Sleep(2000) // Verificar a cada 2 segundos
-                
-            with ex ->
-                form.Invoke(Action(fun () -> 
-                    statusLabel.Text <- sprintf "❌ Erro: %s" ex.Message
-                    statusLabel.ForeColor <- Color.Red
-                )) |> ignore
-            finally
-                form.Invoke(Action(fun () -> 
-                    isActive <- false
-                    killButton.Enabled <- true
-                    stopButton.Enabled <- false
-                    progressBar.Visible <- false
-                    statusLabel.Text <- "⏸️ Monitoramento parado"
-                    statusLabel.ForeColor <- Color.Gray
-                    monitoring <- false
-                )) |> ignore
-        )
+        -- Limpar ao sair
+        if not monitoring then
+            statusLabel.Text = "⏸️ Monitoramento parado"
+            statusLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+            killButton.Visible = true
+            stopButton.Visible = false
+        end
+    end)
+end
+
+-- Eventos dos botões
+killButton.MouseButton1Click:Connect(executeFirstSequence)
+
+stopButton.MouseButton1Click:Connect(function()
+    monitoring = false
+    playerDied = false
+    statusLabel.Text = "⏹️ Parando monitoramento..."
+    statusLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+    wait(1)
+    killButton.Visible = true
+    stopButton.Visible = false
+end)
+
+-- Fechar lista quando clicar fora
+mouse.Button1Down:Connect(function()
+    if playerListFrame.Visible then
+        wait()
+        local mousePos = Vector2.new(mouse.X, mouse.Y)
+        local absPos = playerListFrame.AbsolutePosition
+        local absSize = playerListFrame.AbsoluteSize
         
-        workerThread.IsBackground <- true
-        workerThread.Start()
+        if mousePos.X < absPos.X or mousePos.X > absPos.X + absSize.X or
+           mousePos.Y < absPos.Y or mousePos.Y > absPos.Y + absSize.Y then
+            playerListFrame.Visible = false
+        end
+    end
+end)
 
-// Eventos dos botões
-refreshButton.Click.Add(fun _ -> updatePlayerList())
-
-playerCombo.SelectedIndexChanged.Add(fun _ ->
-    if playerCombo.SelectedItem <> null then
-        selectedPlayer <- playerCombo.SelectedItem.ToString()
-        statusLabel.Text <- sprintf "👤 Player selecionado: %s" selectedPlayer)
-
-killButton.Click.Add(fun _ -> executePropSequence())
-
-stopButton.Click.Add(fun _ ->
-    monitoring <- false
-    statusLabel.Text <- "⏹️ Parando monitoramento..."
-    statusLabel.ForeColor <- Color.Orange)
-
-// Atualizar lista ao iniciar
-form.Load.Add(fun _ -> updatePlayerList())
-
-// Iniciar aplicação
-Application.Run(form)
+print("✅ Interface carregada! Arraste a barra superior para mover.")
