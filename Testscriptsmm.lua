@@ -55,7 +55,7 @@ local Window = WindUI:CreateWindow({
         Key = { "BLOXFRUITS2024", "TESTE123" },
         Note = "Hub em teste - use qualquer key acima",
         Thumbnail = {
-            Image = "rbxassetid://17382040552",  -- Coloque um ID de imagem se quiser
+            Image = "rbxassetid://84973708912590",  -- Coloque um ID de imagem se quiser
             Title = "Blox Fruits Test",
         },
         URL = "https://discord.gg/exemplo",
