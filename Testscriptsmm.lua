@@ -59,7 +59,7 @@ local Window = WindUI:CreateWindow({
             Title = "Blox Fruits Test",
         },
         URL = "https://discord.gg/exemplo",
-        SaveKey = true,
+        SaveKey = false,
     },
 })
 
