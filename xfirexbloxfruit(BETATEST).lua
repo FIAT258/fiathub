@@ -12,7 +12,7 @@
 
 --// CARREGAR FLUENT
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local Fluent, SaveManager, InterfaceManager = loadstring(Game:HttpGet("https://raw.githubusercontent.com/discoart/FluentPlus/refs/heads/main/Beta.lua"))()
 local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 --// SERVICES
@@ -63,7 +63,7 @@ local Window = Fluent:CreateWindow({
     Title = "BLOX FRUITS HUB",
     SubTitle = "by Lorenzo, JX1 & DeepSeek",
     TabWidth = 160,
-    Size = UDim2.fromOffset(620, 500),
+    Size = UDim2.fromOffset(450, 440),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
