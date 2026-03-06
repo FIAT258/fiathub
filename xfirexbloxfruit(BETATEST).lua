@@ -6,7 +6,7 @@
     ██████╔╝███████╗╚██████╔╝██╔╝ ██╗
     ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═╝
     
-    BLOX FRUITS HUB - FLUENT INTERFACE
+    BLOX FRUITS HUB - FLUENT INTERFACE (ATUALIZADO)
     by Lorenzo, JX1 & DeepSeek
 ]]
 
@@ -27,16 +27,17 @@ local player = Players.LocalPlayer
 _G.AutoFarm = false
 _G.AutoEquip = false
 _G.AutoStore = false
-_G.AutoAttack = false
 _G.AutoBuso = false
 _G.BringMobs = false
 _G.AutoChest = false
 _G.Noclip = false
 _G.AutoStatus = false
+_G.SpinFruit = false
 _G.SelectedWeapon = "punch"
 _G.StatusType = "Melee"
 _G.StatusAmount = 1
 _G.CurrentQuest = {}
+_G.LastQuestLevel = 0
 
 --// LISTA DE FRUTAS PARA STORE
 local frutas = {
@@ -58,12 +59,27 @@ local combatStyles = {
     "Dragon Talon", "Godhuman", "Sanguine Art"
 }
 
+--// LISTA DE ITENS PARA COMPRAR (1º MAR)
+local shopItems = {
+    { Name = "Katana",      RemoteArg = "Katana" },
+    { Name = "Cutlass",     RemoteArg = "Cutlass" },
+    { Name = "Saber",       RemoteArg = "Saber" },
+    { Name = "Pipe",        RemoteArg = "Pipe" },
+    { Name = "Dual Katana", RemoteArg = "DualKatana" },
+    { Name = "Iron Mace",   RemoteArg = "IronMace" },
+    { Name = "Slingshot",   RemoteArg = "Slingshot" },
+    { Name = "Flintlock",   RemoteArg = "Flintlock" },
+    { Name = "Musket",      RemoteArg = "Musket" },
+    { Name = "Refined Flintlock", RemoteArg = "RefinedFlintlock" },
+    { Name = "Cannon",      RemoteArg = "Cannon" },
+}
+
 --// CRIAR JANELA
 local Window = Fluent:CreateWindow({
-    Title = "XFIREX HUB BLOX FRUTS (1 SEA)",
+    Title = "XFIREX HUB (BLOXFRUITS) 1 sea",
     SubTitle = "by Lorenzo, JX1 & DeepSeek",
     TabWidth = 160,
-    Size = UDim2.fromOffset(450, 440),
+    Size = UDim2.fromOffset(460, 480),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
@@ -82,6 +98,7 @@ local Tabs = {
     Fruits = Window:AddTab({ Title = "Frutas", Icon = "apple" }),
     Chest = Window:AddTab({ Title = "Baús", Icon = "gift" }),
     Status = Window:AddTab({ Title = "Status", Icon = "bar-chart" }),
+    Shop = Window:AddTab({ Title = "Loja", Icon = "shopping-cart" }),
     Config = Window:AddTab({ Title = "Config", Icon = "settings" }),
     Extras = Window:AddTab({ Title = "Extras", Icon = "star" })
 }
@@ -291,6 +308,25 @@ local function GetQuestByLevel(level)
     return questData
 end
 
+--// Função para fazer Tween suave e contínuo até o alvo
+local function tweenToTarget(targetPart, offsetY)
+    local character = player.Character
+    if not character or not targetPart then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local tweenInfo = TweenInfo.new(
+        0.5, -- duração curta para atualização constante
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.Out
+    )
+    
+    local goal = {CFrame = targetPart.CFrame * CFrame.new(0, offsetY or 20, 0)}
+    local tween = TweenService:Create(hrp, tweenInfo, goal)
+    tween:Play()
+    return tween
+end
+
 --------------------------------------------------
 --// ABA FARM
 --------------------------------------------------
@@ -341,43 +377,77 @@ Tabs.Farm:AddToggle("AutoEquip", {
     end
 })
 
--- Toggle Auto Farm
+-- Toggle Auto Farm (CORRIGIDO)
 Tabs.Farm:AddToggle("AutoFarm", {
     Title = "Auto Farm",
-    Description = "Faz farm automático de níveis",
+    Description = "Faz farm automático de níveis (tween contínuo, bring mobs funcional)",
     Default = false,
     Callback = function(Value)
         _G.AutoFarm = Value
         if Value then
+            _G.LastQuestLevel = CheckLevel() or 0
             spawn(function()
                 while _G.AutoFarm do
                     pcall(function()
                         local level = CheckLevel()
                         if not level then wait(1) return end
                         
-                        local quest = GetQuestByLevel(level)
-                        if quest then
-                            local args = {"StartQuest", quest.NameQuest, quest.LevelQuest}
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(args))
+                        -- Verifica se subiu de nível para trocar quest
+                        if level > _G.LastQuestLevel then
+                            _G.LastQuestLevel = level
+                        end
+                        
+                        local quest = GetQuestByLevel(_G.LastQuestLevel)
+                        if not quest then wait(1) return end
+                        
+                        -- Inicia quest (se não tiver ativa, o remote lida com isso)
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", quest.NameQuest, quest.LevelQuest)
+                        
+                        local enemies = Workspace:FindFirstChild("Enemies")
+                        if not enemies or not player.Character then wait(0.5) return end
+                        
+                        -- Procura o mob mais próximo da quest
+                        local targetMob = nil
+                        local targetHRP = nil
+                        for _, mob in pairs(enemies:GetChildren()) do
+                            local hum = mob:FindFirstChild("Humanoid")
+                            local hrp = mob:FindFirstChild("HumanoidRootPart")
+                            if hum and hrp and hum.Health > 0 then
+                                if mob.Name:find(quest.NameMon) or mob.Name == quest.NameMon then
+                                    targetMob = mob
+                                    targetHRP = hrp
+                                    break
+                                end
+                            end
+                        end
+                        
+                        if targetHRP then
+                            -- Tween contínuo para cima do mob
+                            tweenToTarget(targetHRP, 20)
                             
-                            local enemies = Workspace:FindFirstChild("Enemies")
-                            if enemies and player.Character then
+                            -- Bring Mobs (puxa até 5 mobs para baixo do player)
+                            if _G.BringMobs then
+                                local count = 0
                                 for _, mob in pairs(enemies:GetChildren()) do
+                                    if count >= 5 then break end
                                     local hum = mob:FindFirstChild("Humanoid")
-                                    if hum and hum.Health > 0 then
+                                    local hrp = mob:FindFirstChild("HumanoidRootPart")
+                                    if hum and hrp and hum.Health > 0 then
                                         if mob.Name:find(quest.NameMon) or mob.Name == quest.NameMon then
-                                            local hrp = mob:FindFirstChild("HumanoidRootPart")
-                                            if hrp then
-                                                player.Character.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(0, 20, 0)
-                                                break
-                                            end
+                                            hrp.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, -15, 0)
+                                            count = count + 1
                                         end
                                     end
                                 end
                             end
+                            
+                            -- Aguarda um pouco antes de reavaliar alvo
+                            wait(0.3)
+                        else
+                            -- Se não encontrar mob, espera spawnar
+                            wait(1)
                         end
                     end)
-                    wait(3)
                 end
             end)
         end
@@ -387,7 +457,7 @@ Tabs.Farm:AddToggle("AutoFarm", {
 -- Toggle Bring Mob
 Tabs.Farm:AddToggle("BringMobs", {
     Title = "Bring Mobs",
-    Description = "Puxa os mobs para perto de você",
+    Description = "Puxa os mobs para perto de você (funciona com Auto Farm)",
     Default = false,
     Callback = function(Value)
         _G.BringMobs = Value
@@ -442,25 +512,24 @@ Tabs.Fruits:AddToggle("AutoStore", {
     end
 })
 
--- Botão Perder Todo Dinheiro
-Tabs.Fruits:AddButton({
-    Title = "💸 PERDER TODO DINHEIRO (NUNCA USE)",
-    Description = "Compra 900 barcos - VAI GASTAR TODO SEU DINHEIRO",
-    Callback = function()
-        Fluent:Notify({
-            Title = "⚠️ AVISO",
-            Content = "Isso vai gastar TODO seu dinheiro!",
-            Duration = 5
-        })
-        
-        spawn(function()
-            for i = 1, 900 do
-                pcall(function()
-                    ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyBoat", "PirateSloop")
-                end)
-                wait(0.3)
-            end
-        end)
+-- Toggle Spin Fruit (a cada 2 horas)
+Tabs.Fruits:AddToggle("SpinFruit", {
+    Title = "Spin Fruit Automático",
+    Description = "Executa spin a cada 2 horas (uso consciente)",
+    Default = false,
+    Callback = function(Value)
+        _G.SpinFruit = Value
+        if Value then
+            spawn(function()
+                while _G.SpinFruit do
+                    pcall(function()
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("Cousin", "Buy", "DLCBoxData")
+                        print("🍎 Spin Fruit executado")
+                    end)
+                    wait(7200) -- 2 horas = 7200 segundos
+                end
+            end)
+        end
     end
 })
 
@@ -573,51 +642,29 @@ Tabs.Status:AddToggle("AutoStatus", {
 })
 
 --------------------------------------------------
---// ABA CONFIGURAÇÕES
+--// ABA LOJA (COMPRAR ITENS)
 --------------------------------------------------
 
--- Toggle Auto Attack
-Tabs.Config:AddToggle("AutoAttack", {
-    Title = "Auto Attack",
-    Description = "Ataca mobs próximos automaticamente",
-    Default = false,
-    Callback = function(Value)
-        _G.AutoAttack = Value
-        if Value then
-            spawn(function()
-                while _G.AutoAttack do
-                    pcall(function()
-                        local character = player.Character
-                        if not character then return end
-                        
-                        local enemies = Workspace:FindFirstChild("Enemies")
-                        if not enemies then return end
-                        
-                        local nearest = nil
-                        for _, mob in pairs(enemies:GetChildren()) do
-                            local hrp = mob:FindFirstChild("HumanoidRootPart")
-                            local hum = mob:FindFirstChild("Humanoid")
-                            if hrp and hum and hum.Health > 0 then
-                                local dist = (character.HumanoidRootPart.Position - hrp.Position).Magnitude
-                                if dist <= 60 then
-                                    nearest = hrp
-                                    break
-                                end
-                            end
-                        end
-                        
-                        if nearest then
-                            local attackId = tostring(math.random(100000, 999999))
-                            ReplicatedStorage.Modules.Net["RE/RegisterAttack"]:FireServer(0.1)
-                            ReplicatedStorage.Modules.Net["RE/RegisterHit"]:FireServer(nearest, {}, attackId)
-                        end
-                    end)
-                    wait()
-                end
+for _, item in ipairs(shopItems) do
+    Tabs.Shop:AddButton({
+        Title = "Comprar " .. item.Name,
+        Description = "Compra " .. item.Name .. " (se disponível)",
+        Callback = function()
+            pcall(function()
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyItem", item.RemoteArg)
+                Fluent:Notify({
+                    Title = "Loja",
+                    Content = item.Name .. " comprado!",
+                    Duration = 3
+                })
             end)
         end
-    end
-})
+    })
+end
+
+--------------------------------------------------
+--// ABA CONFIGURAÇÕES
+--------------------------------------------------
 
 -- Toggle Auto Buso
 Tabs.Config:AddToggle("AutoBuso", {
@@ -727,10 +774,58 @@ Tabs.Extras:AddButton({
     end
 })
 
+-- Botão Redeem All Codes
+Tabs.Extras:AddButton({
+    Title = "Redeem All Codes",
+    Description = "Resgata todos os códigos disponíveis",
+    Callback = function()
+        spawn(function()
+            local codes = {
+                "fruitconcepts", "krazydares", "TRIPLEABUSE", "SEATROLLING",
+                "ADMINFIGHT", "BANEXPLOIT", "GetPranked", "BossBuild",
+                "1LOSTADMIN", "GIFTING_HOURS", "NOMOREHACK", "EARN_FRUITS",
+                "FIGHT4FRUIT", "SUB2OFFICIALNOOBIE", "STRAWHATMAINE",
+                "SUB2NOOBMASTER123", "JCWK", "KITTGAMING", "MagicBus",
+                "BLUXXY", "LIGHTNINGABUSE", "KITT_RESET", "SUB2CAPTAINMAUI",
+                "SUB2FER999", "ENYU_IS_PRO", "STARCODEHEO", "FUDD10_V2",
+                "SUB2GAMERROBOT_EXP1", "SUB2GAMERROBOT_RESET1", "SUB2UNCLEKIZARU",
+                "SUB2DAIGROCK", "AXIORE", "TANTAIGAMING", "NOEXPLOITER",
+                "NOOB2ADMIN", "CODESLIDE", "ADMINHACKED", "ADMINDARES",
+                "NEWTROLL", "REWARDFUN", "24NOADMIN", "GAMER_ROBOT_1M",
+                "SUBGAMERROBOT_RESET", "GAMERROBOT_YT", "TY_FOR_WATCHING",
+                "EXP_5B", "RESET_5B", "UPD16", "3BVISITS", "2BILLION",
+                "UPD15", "BIGNEWS"
+            }
+            
+            local redeemRemote = ReplicatedStorage.Remotes.Redeem
+            Fluent:Notify({
+                Title = "Códigos",
+                Content = "Iniciando resgate de " .. #codes .. " códigos...",
+                Duration = 4
+            })
+            
+            for i, code in ipairs(codes) do
+                pcall(function()
+                    redeemRemote:InvokeServer(code)
+                end)
+                if i < #codes then
+                    task.wait(0.3)
+                end
+            end
+            
+            Fluent:Notify({
+                Title = "Códigos",
+                Content = "Processo concluído!",
+                Duration = 4
+            })
+        end)
+    end
+})
+
 -- Parágrafo com créditos
 Tabs.Extras:AddParagraph({
     Title = "📌 CRÉDITOS",
-    Content = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: 5.0 Fluent\nObrigado por usar nosso hub!"
+    Content = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: 6.0 Fluent Atualizada\nObrigado por usar nosso hub!"
 })
 
 --------------------------------------------------
