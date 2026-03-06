@@ -60,7 +60,7 @@ local combatStyles = {
 
 --// CRIAR JANELA
 local Window = Fluent:CreateWindow({
-    Title = "BLOX FRUITS HUB",
+    Title = "XFIREX HUB BLOX FRUTS (1 SEA)",
     SubTitle = "by Lorenzo, JX1 & DeepSeek",
     TabWidth = 160,
     Size = UDim2.fromOffset(450, 440),
