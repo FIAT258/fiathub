@@ -3,15 +3,15 @@ local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/rel
 
 -- Cria a janela principal (com KeySystem mantido)
 local Window = WindUI:CreateWindow({
-    Title = "XFIREX HUB ripershot",
-    Icon = "crosshair",
-    Author = "by JX1 and lorenzo",
+    Title = "My Super Hub",
+    Icon = "door-open",
+    Author = "by .ftgs and .ftgs",
     Folder = "MySuperHub",
     Size = UDim2.fromOffset(580, 460),
     MinSize = Vector2.new(560, 350),
     MaxSize = Vector2.new(850, 560),
-    Transparent = false,
-    Theme = "Laranja Vibrante",
+    Transparent = true,
+    Theme = "Dark",
     Resizable = true,
     SideBarWidth = 200,
     BackgroundImageTransparency = 0.42,
@@ -26,10 +26,10 @@ local Window = WindUI:CreateWindow({
     },
     KeySystem = {
         Key = { "1234", "5678" },
-        Note = ".",
+        Note = "Example Key System.",
         Thumbnail = {
-            Image = "rbxassetid://133843871041283",
-            Title = "",
+            Image = "rbxassetid://",
+            Title = "Thumbnail",
         },
         URL = "YOUR LINK TO GET KEY (Discord, Linkvertise, Pastebin, etc.)",
         SaveKey = false,
@@ -552,19 +552,16 @@ local creditos = CreditosTab:Paragraph({
 })
 
 -- ==================== FINALIZAÇÃO ====================
--- Tema personalizado com tons de laranja
+-- Cria um tema personalizado (opcional)
 WindUI:AddTheme({
-    Name = "Laranja Vibrante",        -- Nome do tema
-    Accent = Color3.fromHex("#ff8800"),  -- Laranja vibrante (destaques)
-    Background = Color3.fromHex("#1e1e1e"), -- Cinza bem escuro (fundo)
-    Outline = Color3.fromHex("#ffaa33"),   -- Laranja claro (contornos)
-    Text = Color3.fromHex("#ffffff"),      -- Branco (texto)
-    Placeholder = Color3.fromHex("#aaaaaa"), -- Cinza médio (placeholders)
-    Button = Color3.fromHex("#cc5500"),    -- Laranja escuro queimado (botões)
-    Icon = Color3.fromHex("#ffaa33"),      -- Laranja claro (ícones)
+    Name = "My Theme",
+    Accent = Color3.fromHex("#18181b"),
+    Background = Color3.fromHex("#101010"),
+    Outline = Color3.fromHex("#FFFFFF"),
+    Text = Color3.fromHex("#FFFFFF"),
+    Placeholder = Color3.fromHex("#7a7a7a"),
+    Button = Color3.fromHex("#52525b"),
+    Icon = Color3.fromHex("#a1a1aa"),
 })
-
--- Para aplicar automaticamente (se suportado):
- WindUI:SetTheme("Laranja Vibrante")
 
 print("Interface carregada com sucesso!")
