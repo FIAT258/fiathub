@@ -5,10 +5,10 @@
     ██╔══██╗██║     ██║   ██║ ██╔██╗ 
     ██████╔╝███████╗╚██████╔╝██╔╝ ██╗
     ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═╝
-
-    BLOX FRUITS HUB - FLUENT INTERFACE
+    
+    BLOX FRUITS HUB - FLUENT INTERFACE (CORRIGIDO)
     by Lorenzo, JX1 & DeepSeek
-    Versão 7.5 - Corrigida e Otimizada
+    Versão 8.0 - Farm, Baús, Status, Loja e mais
 ]]
 
 --// CARREGAR FLUENT
@@ -27,7 +27,7 @@ local player = Players.LocalPlayer
 --// VARIÁVEIS GLOBAIS
 _G.AutoFarm = false
 _G.AutoEquip = false
-_G.AutoAttack = false
+_G.AutoStore = false
 _G.AutoBuso = false
 _G.BringMobs = false
 _G.AutoChestTween = false
@@ -39,19 +39,25 @@ _G.AutoSpeed = false
 _G.SelectedWeapon = "punch"
 _G.StatusType = "Melee"
 _G.StatusAmount = 1
-_G.TweenSpeed = 250
 _G.WalkSpeedValue = 16
+_G.TweenSpeed = 250
 _G.CurrentQuest = {}
-_G.LastLevel = 0
-_G.VisitedChests = {}  -- para o modo tween não repetir
+_G.LastQuestLevel = 0
+_G.VisitedChests = {}
 _G.ChestTPCount = 0
-_G.FarmConnection = nil
-_G.AttackConnection = nil
-_G.BusoConnection = nil
-_G.ChestTweenConnection = nil
-_G.ChestTPConnection = nil
-_G.SpeedConnection = nil
-_G.SpinConnection = nil
+
+--// LISTA DE FRUTAS PARA STORE
+local frutas = {
+    "Bomb-Bomb", "Spike-Spike", "Chop-Chop", "Spring-Spring", "Rocket-Rocket",
+    "Kilo-Kilo", "Spin-Spin", "Love-Love", "Rubber-Rubber", "Smoke-Smoke",
+    "Flame-Flame", "Ice-Ice", "Sand-Sand", "Dark-Dark", "Light-Light",
+    "Magma-Magma", "Rumble-Rumble", "Blade-Blade", "Stone-Stone", "Barrier-Barrier",
+    "Diamond-Diamond", "String-String", "Spider-Spider", "Falcon-Falcon", "Saber-Saber",
+    "Portal-Portal", "Buddha-Buddha", "Gravity-Gravity", "Mammoth-Mammoth", "Sound-Sound",
+    "Control-Control", "Spirit-Spirit", "Shadow-Shadow", "Venom-Venom", "Dough-Dough",
+    "Dragon-Dragon", "Leopard-Leopard", "Kitsune-Kitsune", "Pain-Pain", "Ghost-Ghost",
+    "Revive-Revive", "Oni-Oni", "Celestial-Celestial", "Blizzard-Blizzard", "Storm-Storm"
+}
 
 --// LISTA DE COMBATES
 local combatStyles = {
@@ -62,16 +68,25 @@ local combatStyles = {
 
 --// LISTA DE ITENS PARA COMPRA (1º MAR)
 local shopItems = {
-    "Katana", "Cutlass", "Iron Mace", "Pipe", "Dual Katana",
-    "Slingshot", "Flintlock", "Musket", "Refined Flintlock", "Cannon"
+    { Name = "Katana",      RemoteArg = "Katana" },
+    { Name = "Cutlass",     RemoteArg = "Cutlass" },
+    { Name = "Saber",       RemoteArg = "Saber" },
+    { Name = "Pipe",        RemoteArg = "Pipe" },
+    { Name = "Dual Katana", RemoteArg = "DualKatana" },
+    { Name = "Iron Mace",   RemoteArg = "IronMace" },
+    { Name = "Slingshot",   RemoteArg = "Slingshot" },
+    { Name = "Flintlock",   RemoteArg = "Flintlock" },
+    { Name = "Musket",      RemoteArg = "Musket" },
+    { Name = "Refined Flintlock", RemoteArg = "RefinedFlintlock" },
+    { Name = "Cannon",      RemoteArg = "Cannon" },
 }
 
 --// CRIAR JANELA
 local Window = Fluent:CreateWindow({
-    Title = "XFIREX HUB 1 SEA",
+    Title = "XFIREX HUB blox fruits sea 1 ",
     SubTitle = "by Lorenzo, JX1 & DeepSeek",
-    TabWidth = 140,
-    Size = UDim2.fromOffset(460, 480),
+    TabWidth = 160,
+    Size = UDim2.fromOffset(620, 500),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
@@ -88,9 +103,9 @@ Fluent:Notify({
 local Tabs = {
     Farm = Window:AddTab({ Title = "Farm", Icon = "sword" }),
     Fruits = Window:AddTab({ Title = "Frutas", Icon = "apple" }),
-    Shop = Window:AddTab({ Title = "Loja", Icon = "shopping-cart" }),
     Chest = Window:AddTab({ Title = "Baús", Icon = "gift" }),
     Status = Window:AddTab({ Title = "Status", Icon = "bar-chart" }),
+    Shop = Window:AddTab({ Title = "Loja", Icon = "shopping-cart" }),
     Config = Window:AddTab({ Title = "Config", Icon = "settings" }),
     Extras = Window:AddTab({ Title = "Extras", Icon = "star" })
 }
@@ -109,80 +124,250 @@ local function CheckLevel()
     return success and level or nil
 end
 
--- Função para criar tween suave (com segurança)
-local function TweenTo(goalCFrame, speed)
+-- Função para criar tween contínuo (atualiza a cada 0.3s para manter suavidade)
+local function TweenToTarget(targetPart, offsetY)
     local character = player.Character
-    if not character then return end
+    if not character or not targetPart then return end
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     
-    local distance = (hrp.Position - goalCFrame.Position).Magnitude
-    local time = distance / speed
-    if time > 20 then time = 20 end -- limite de tempo para não travar
-    
-    local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Linear)
-    local goal = {CFrame = goalCFrame}
+    local tweenInfo = TweenInfo.new(
+        0.3, -- tempo curto para atualização constante
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.Out
+    )
+    local goal = {CFrame = targetPart.CFrame * CFrame.new(0, offsetY or 20, 0)}
     local tween = TweenService:Create(hrp, tweenInfo, goal)
     tween:Play()
     return tween
 end
 
--- Função de auto attack (exata)
-local function StartAutoAttack()
-    if _G.AttackConnection then
-        task.cancel(_G.AttackConnection)
-        _G.AttackConnection = nil
+-- Função para pegar quest por nível (completa com todos os níveis)
+local function GetQuestByLevel(level)
+    if level >= 1 and level <= 9 then
+        return {
+            Mon = "Bandit",
+            LevelQuest = 1,
+            NameQuest = "BanditQuest1",
+            NameMon = "Bandit"
+        }
+    elseif level >= 10 and level <= 14 then
+        return {
+            Mon = "Monkey",
+            LevelQuest = 1,
+            NameQuest = "JungleQuest",
+            NameMon = "Monkey"
+        }
+    elseif level >= 15 and level <= 29 then
+        return {
+            Mon = "Gorilla",
+            LevelQuest = 2,
+            NameQuest = "JungleQuest",
+            NameMon = "Gorilla"
+        }
+    elseif level >= 30 and level <= 39 then
+        return {
+            Mon = "Pirate",
+            LevelQuest = 1,
+            NameQuest = "BuggyQuest1",
+            NameMon = "Pirate"
+        }
+    elseif level >= 40 and level <= 59 then
+        return {
+            Mon = "Brute",
+            LevelQuest = 2,
+            NameQuest = "BuggyQuest1",
+            NameMon = "Brute"
+        }
+    elseif level >= 60 and level <= 74 then
+        return {
+            Mon = "Desert Bandit",
+            LevelQuest = 1,
+            NameQuest = "DesertQuest",
+            NameMon = "Desert Bandit"
+        }
+    elseif level >= 75 and level <= 89 then
+        return {
+            Mon = "Desert Officer",
+            LevelQuest = 2,
+            NameQuest = "DesertQuest",
+            NameMon = "Desert Officer"
+        }
+    elseif level >= 90 and level <= 99 then
+        return {
+            Mon = "Snow Bandit",
+            LevelQuest = 1,
+            NameQuest = "SnowQuest",
+            NameMon = "Snow Bandit"
+        }
+    elseif level >= 100 and level <= 119 then
+        return {
+            Mon = "Snowman",
+            LevelQuest = 2,
+            NameQuest = "SnowQuest",
+            NameMon = "Snowman"
+        }
+    elseif level >= 120 and level <= 149 then
+        return {
+            Mon = "Chief Petty Officer",
+            LevelQuest = 1,
+            NameQuest = "MarineQuest2",
+            NameMon = "Chief Petty Officer"
+        }
+    elseif level >= 150 and level <= 174 then
+        return {
+            Mon = "Sky Bandit",
+            LevelQuest = 1,
+            NameQuest = "SkyQuest",
+            NameMon = "Sky Bandit"
+        }
+    elseif level >= 175 and level <= 189 then
+        return {
+            Mon = "Dark Master",
+            LevelQuest = 2,
+            NameQuest = "SkyQuest",
+            NameMon = "Dark Master"
+        }
+    elseif level >= 190 and level <= 209 then
+        return {
+            Mon = "Prisoner",
+            LevelQuest = 1,
+            NameQuest = "PrisonerQuest",
+            NameMon = "Prisoner"
+        }
+    elseif level >= 210 and level <= 249 then
+        return {
+            Mon = "Dangerous Prisoner",
+            LevelQuest = 2,
+            NameQuest = "PrisonerQuest",
+            NameMon = "Dangerous Prisoner"
+        }
+    elseif level >= 250 and level <= 274 then
+        return {
+            Mon = "Toga Warrior",
+            LevelQuest = 1,
+            NameQuest = "ColosseumQuest",
+            NameMon = "Toga Warrior"
+        }
+    elseif level >= 275 and level <= 299 then
+        return {
+            Mon = "Gladiator",
+            LevelQuest = 2,
+            NameQuest = "ColosseumQuest",
+            NameMon = "Gladiator"
+        }
+    elseif level >= 300 and level <= 324 then
+        return {
+            Mon = "Military Soldier",
+            LevelQuest = 1,
+            NameQuest = "MagmaQuest",
+            NameMon = "Military Soldier"
+        }
+    elseif level >= 325 and level <= 374 then
+        return {
+            Mon = "Military Spy",
+            LevelQuest = 2,
+            NameQuest = "MagmaQuest",
+            NameMon = "Military Spy"
+        }
+    elseif level >= 375 and level <= 399 then
+        return {
+            Mon = "Fishman Warrior",
+            LevelQuest = 1,
+            NameQuest = "FishmanQuest",
+            NameMon = "Fishman Warrior"
+        }
+    elseif level >= 400 and level <= 449 then
+        return {
+            Mon = "Fishman Commando",
+            LevelQuest = 2,
+            NameQuest = "FishmanQuest",
+            NameMon = "Fishman Commando"
+        }
+    elseif level >= 450 and level <= 474 then
+        return {
+            Mon = "God's Guard",
+            LevelQuest = 1,
+            NameQuest = "SkyExp1Quest",
+            NameMon = "God's Guard"
+        }
+    elseif level >= 475 and level <= 524 then
+        return {
+            Mon = "Shanda",
+            LevelQuest = 2,
+            NameQuest = "SkyExp1Quest",
+            NameMon = "Shanda"
+        }
+    elseif level >= 525 and level <= 549 then
+        return {
+            Mon = "Royal Squad",
+            LevelQuest = 1,
+            NameQuest = "SkyExp2Quest",
+            NameMon = "Royal Squad"
+        }
+    elseif level >= 550 and level <= 624 then
+        return {
+            Mon = "Royal Soldier",
+            LevelQuest = 2,
+            NameQuest = "SkyExp2Quest",
+            NameMon = "Royal Soldier"
+        }
+    elseif level >= 625 and level <= 649 then
+        return {
+            Mon = "Galley Pirate",
+            LevelQuest = 1,
+            NameQuest = "FountainQuest",
+            NameMon = "Galley Pirate"
+        }
+    elseif level >= 650 then
+        return {
+            Mon = "Galley Captain",
+            LevelQuest = 2,
+            NameQuest = "FountainQuest",
+            NameMon = "Galley Captain"
+        }
     end
-    _G.AttackConnection = task.spawn(function()
+    return nil
+end
+
+-- Função de auto attack (exata, com loop 0.15s)
+local function StartAutoAttack()
+    task.spawn(function()
         local enemies = workspace:WaitForChild("Enemies")
-        local function GetCharacter()
-            local char = player.Character or player.CharacterAdded:Wait()
-            local hrp = char:WaitForChild("HumanoidRootPart", 5)
-            return char, hrp
-        end
+        while _G.AutoAttack do
+            pcall(function()
+                local character = player.Character
+                if not character then return end
+                local root = character:FindFirstChild("HumanoidRootPart")
+                if not root then return end
 
-        local function Attack()
-            local character, root = GetCharacter()
-            if not character or not root then return end
-
-            local nearest = nil
-            local shortest = math.huge
-
-            for _, mob in pairs(enemies:GetChildren()) do
-                local hrp = mob:FindFirstChild("HumanoidRootPart")
-                local hum = mob:FindFirstChildOfClass("Humanoid")
-                if hrp and hum and hum.Health > 0 then
-                    local dist = (root.Position - hrp.Position).Magnitude
-                    if dist <= 60 and dist < shortest then
-                        shortest = dist
-                        nearest = hrp
+                local nearest = nil
+                local shortest = math.huge
+                for _, mob in pairs(enemies:GetChildren()) do
+                    local hrp = mob:FindFirstChild("HumanoidRootPart")
+                    local hum = mob:FindFirstChildOfClass("Humanoid")
+                    if hrp and hum and hum.Health > 0 then
+                        local dist = (root.Position - hrp.Position).Magnitude
+                        if dist <= 60 and dist < shortest then
+                            shortest = dist
+                            nearest = hrp
+                        end
                     end
                 end
-            end
 
-            if not nearest then return end
-
-            local attackId = tostring(math.random(100000, 999999))
-            pcall(function()
-                ReplicatedStorage.Modules.Net["RE/RegisterAttack"]:FireServer(0.1)
-                ReplicatedStorage.Modules.Net["RE/RegisterHit"]:FireServer(nearest, {}, attackId)
+                if nearest then
+                    local attackId = tostring(math.random(100000, 999999))
+                    ReplicatedStorage.Modules.Net["RE/RegisterAttack"]:FireServer(0.1)
+                    ReplicatedStorage.Modules.Net["RE/RegisterHit"]:FireServer(nearest, {}, attackId)
+                end
             end)
-        end
-
-        while _G.AutoAttack do
-            Attack()
             task.wait(0.15)
         end
     end)
 end
 
--- Função de auto buso (corrigida)
+-- Função de auto buso (corrigida: ativa uma vez e reativa 6s após morte)
 local function StartAutoBuso()
-    if _G.BusoConnection then
-        _G.BusoConnection:Disconnect()
-        _G.BusoConnection = nil
-    end
-    
     local function ActivateBuso()
         pcall(function()
             ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
@@ -191,21 +376,22 @@ local function StartAutoBuso()
     
     ActivateBuso()
     
-    _G.BusoConnection = player.CharacterAdded:Connect(function()
+    local connection
+    connection = player.CharacterAdded:Connect(function()
         if _G.AutoBuso then
             task.wait(6)
             ActivateBuso()
+        else
+            if connection then
+                connection:Disconnect()
+            end
         end
     end)
 end
 
 -- Função de auto speed
 local function StartAutoSpeed()
-    if _G.SpeedConnection then
-        task.cancel(_G.SpeedConnection)
-        _G.SpeedConnection = nil
-    end
-    _G.SpeedConnection = task.spawn(function()
+    task.spawn(function()
         while _G.AutoSpeed do
             pcall(function()
                 local character = player.Character
@@ -221,23 +407,190 @@ local function StartAutoSpeed()
     end)
 end
 
--- Função de spin fruit
+-- Função de auto farm (baseada na versão que funcionava, com melhorias)
+local function StartAutoFarm()
+    task.spawn(function()
+        while _G.AutoFarm do
+            pcall(function()
+                local level = CheckLevel()
+                if not level then
+                    task.wait(1)
+                    return
+                end
+
+                -- Se subiu de nível, atualiza a quest
+                if level > _G.LastQuestLevel then
+                    _G.LastQuestLevel = level
+                    local quest = GetQuestByLevel(level)
+                    if quest then
+                        _G.CurrentQuest = quest
+                        -- Inicia a nova quest (o remote lida com repetição)
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", quest.NameQuest, quest.LevelQuest)
+                        print("📋 Nova quest iniciada:", quest.NameQuest)
+                    end
+                end
+
+                if not _G.CurrentQuest or not _G.CurrentQuest.NameMon then
+                    task.wait(1)
+                    return
+                end
+
+                local enemies = Workspace:FindFirstChild("Enemies")
+                if not enemies then
+                    task.wait(1)
+                    return
+                end
+
+                local character = player.Character
+                if not character then
+                    task.wait(1)
+                    return
+                end
+
+                -- Procurar o mob mais próximo da quest
+                local targetMob = nil
+                local targetHRP = nil
+                for _, mob in pairs(enemies:GetChildren()) do
+                    local hrp = mob:FindFirstChild("HumanoidRootPart")
+                    local hum = mob:FindFirstChild("Humanoid")
+                    if hrp and hum and hum.Health > 0 then
+                        if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
+                            targetMob = mob
+                            targetHRP = hrp
+                            break
+                        end
+                    end
+                end
+
+                if targetHRP then
+                    -- Tween contínuo para cima do mob
+                    TweenToTarget(targetHRP, 20)
+
+                    -- Bring mobs (puxa até 5 mobs para baixo do player)
+                    if _G.BringMobs then
+                        local count = 0
+                        for _, mob in pairs(enemies:GetChildren()) do
+                            if count >= 5 then break end
+                            local hrp = mob:FindFirstChild("HumanoidRootPart")
+                            local hum = mob:FindFirstChild("Humanoid")
+                            if hrp and hum and hum.Health > 0 then
+                                if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
+                                    hrp.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, -15, 0)
+                                    count = count + 1
+                                end
+                            end
+                        end
+                    end
+
+                    -- Aguarda um pouco antes de reavaliar alvo
+                    task.wait(0.3)
+                else
+                    -- Se não encontrou mob, espera spawnar
+                    task.wait(1)
+                end
+            end)
+        end
+    end)
+end
+
+-- Função de auto chest tween (não repete baús no mesmo ciclo)
+local function StartAutoChestTween()
+    task.spawn(function()
+        while _G.AutoChestTween do
+            pcall(function()
+                local character = player.Character
+                if not character then return end
+
+                -- Coletar baús ainda não visitados neste ciclo
+                local chests = {}
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("BasePart") and (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") then
+                        local key = tostring(v.Position)
+                        if not _G.VisitedChests[key] then
+                            table.insert(chests, v)
+                        end
+                    end
+                end
+
+                if #chests > 0 then
+                    -- Escolher o mais próximo
+                    local closest = nil
+                    local closestDist = math.huge
+                    for _, chest in pairs(chests) do
+                        local dist = (character.HumanoidRootPart.Position - chest.Position).Magnitude
+                        if dist < closestDist then
+                            closestDist = dist
+                            closest = chest
+                        end
+                    end
+
+                    if closest then
+                        TweenToTarget(closest, 2) -- tween para o baú
+                        _G.VisitedChests[tostring(closest.Position)] = true
+                        task.wait(1) -- tempo para coletar
+                    end
+                else
+                    -- Todos os baús foram visitados, aguarda 1 minuto e reseta
+                    task.wait(60)
+                    _G.VisitedChests = {}
+                end
+            end)
+            task.wait(1)
+        end
+    end)
+end
+
+-- Função de auto chest teleporte (ban risk: 3 teleportes e reseta)
+local function StartAutoChestTP()
+    task.spawn(function()
+        while _G.AutoChestTP do
+            pcall(function()
+                local character = player.Character
+                if not character then return end
+
+                local chests = {}
+                for _, v in pairs(Workspace:GetDescendants()) do
+                    if v:IsA("BasePart") and (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") then
+                        table.insert(chests, v)
+                    end
+                end
+
+                if #chests > 0 then
+                    -- Pega o primeiro baú da lista (ou pode ser aleatório)
+                    local target = chests[1]
+                    character.HumanoidRootPart.CFrame = target.CFrame * CFrame.new(0, 2, 0)
+                    _G.ChestTPCount = _G.ChestTPCount + 1
+                    task.wait(0.5)
+
+                    if _G.ChestTPCount >= 3 then
+                        -- Reseta o player (mata para respawn)
+                        character.Humanoid.Health = 0
+                        _G.ChestTPCount = 0
+                        task.wait(5) -- aguarda respawn
+                    end
+                else
+                    task.wait(5)
+                end
+            end)
+            task.wait(1)
+        end
+    end)
+end
+
+-- Função de spin fruit (a cada 2 horas)
 local function StartSpinFruit()
-    if _G.SpinConnection then
-        task.cancel(_G.SpinConnection)
-        _G.SpinConnection = nil
-    end
-    _G.SpinConnection = task.spawn(function()
+    task.spawn(function()
         while _G.SpinFruit do
             pcall(function()
                 ReplicatedStorage.Remotes.CommF_:InvokeServer("Cousin", "Buy", "DLCBoxData")
+                print("🍎 Spin Fruit executado")
             end)
             task.wait(7200) -- 2 horas
         end
     end)
 end
 
--- Função para remover texturas (melhorada)
+-- Função melhorada para remover texturas
 local function RemoveTextures()
     pcall(function()
         for _, v in pairs(Workspace:GetDescendants()) do
@@ -250,7 +603,7 @@ local function RemoveTextures()
                 v:Destroy()
             end
         end
-        -- Opcional: remover também de partes específicas
+        -- Opcional: remover texturas de partes específicas
         for _, v in pairs(Workspace:GetDescendants()) do
             if v:IsA("BasePart") then
                 v.Texture = ""
@@ -265,24 +618,28 @@ local function RemoveTextures()
     end)
 end
 
--- Função para resgatar códigos
+-- Função para resgatar todos os códigos
 local function RedeemAllCodes()
-    local codes = {
-        "fruitconcepts", "krazydares", "TRIPLEABUSE", "SEATROLLING", "ADMINFIGHT",
-        "BANEXPLOIT", "GetPranked", "BossBuild", "1LOSTADMIN", "GIFTING_HOURS",
-        "NOMOREHACK", "EARN_FRUITS", "FIGHT4FRUIT", "SUB2OFFICIALNOOBIE",
-        "STRAWHATMAINE", "SUB2NOOBMASTER123", "JCWK", "KITTGAMING", "MagicBus",
-        "BLUXXY", "LIGHTNINGABUSE", "KITT_RESET", "SUB2CAPTAINMAUI", "SUB2FER999",
-        "ENYU_IS_PRO", "STARCODEHEO", "FUDD10_V2", "SUB2GAMERROBOT_EXP1",
-        "SUB2GAMERROBOT_RESET1", "SUB2UNCLEKIZARU", "SUB2DAIGROCK", "AXIORE",
-        "TANTAIGAMING", "NOEXPLOITER", "NOOB2ADMIN", "CODESLIDE", "ADMINHACKED",
-        "ADMINDARES", "NEWTROLL", "REWARDFUN", "24NOADMIN", "GAMER_ROBOT_1M",
-        "SUBGAMERROBOT_RESET", "GAMERROBOT_YT", "TY_FOR_WATCHING", "EXP_5B",
-        "RESET_5B", "UPD16", "3BVISITS", "2BILLION", "UPD15", "BIGNEWS"
-    }
-    
-    local redeemRemote = ReplicatedStorage.Remotes.Redeem
     task.spawn(function()
+        local codes = {
+            "fruitconcepts", "krazydares", "TRIPLEABUSE", "SEATROLLING", "ADMINFIGHT",
+            "BANEXPLOIT", "GetPranked", "BossBuild", "1LOSTADMIN", "GIFTING_HOURS",
+            "NOMOREHACK", "EARN_FRUITS", "FIGHT4FRUIT", "SUB2OFFICIALNOOBIE",
+            "STRAWHATMAINE", "SUB2NOOBMASTER123", "JCWK", "KITTGAMING", "MagicBus",
+            "BLUXXY", "LIGHTNINGABUSE", "KITT_RESET", "SUB2CAPTAINMAUI", "SUB2FER999",
+            "ENYU_IS_PRO", "STARCODEHEO", "FUDD10_V2", "SUB2GAMERROBOT_EXP1",
+            "SUB2GAMERROBOT_RESET1", "SUB2UNCLEKIZARU", "SUB2DAIGROCK", "AXIORE",
+            "TANTAIGAMING", "NOEXPLOITER", "NOOB2ADMIN", "CODESLIDE", "ADMINHACKED",
+            "ADMINDARES", "NEWTROLL", "REWARDFUN", "24NOADMIN", "GAMER_ROBOT_1M",
+            "SUBGAMERROBOT_RESET", "GAMERROBOT_YT", "TY_FOR_WATCHING", "EXP_5B",
+            "RESET_5B", "UPD16", "3BVISITS", "2BILLION", "UPD15", "BIGNEWS"
+        }
+        local redeemRemote = ReplicatedStorage.Remotes.Redeem
+        Fluent:Notify({
+            Title = "Códigos",
+            Content = "Iniciando resgate de " .. #codes .. " códigos...",
+            Duration = 4
+        })
         for i, code in ipairs(codes) do
             pcall(function()
                 redeemRemote:InvokeServer(code)
@@ -293,502 +650,9 @@ local function RedeemAllCodes()
         end
         Fluent:Notify({
             Title = "Códigos",
-            Content = "Todos os códigos foram resgatados!",
-            Duration = 5
+            Content = "Processo concluído!",
+            Duration = 4
         })
-    end)
-end
-
--- Função para obter quest por nível (lista completa do usuário)
-local function GetQuestByLevel(level)
-    if level >= 1 and level <= 9 then
-        return {
-            Mon = "Bandit",
-            LevelQuest = 1,
-            NameQuest = "BanditQuest1",
-            NameMon = "Bandit",
-            CFrameQuest = CFrame.new(1059.37195, 15.4495068, 1550.4231, 0.939700544, -0, -0.341998369, 0, 1, -0, 0.341998369, 0, 0.939700544),
-            CFrameMon = CFrame.new(1045.962646484375, 27.00250816345215, 1560.8203125)
-        }
-    elseif level >= 10 and level <= 14 then
-        return {
-            Mon = "Monkey",
-            LevelQuest = 1,
-            NameQuest = "JungleQuest",
-            NameMon = "Monkey",
-            CFrameQuest = CFrame.new(-1598.08911, 35.5501175, 153.377838, 0, 0, 1, 0, 1, -0, -1, 0, 0),
-            CFrameMon = CFrame.new(-1448.51806640625, 67.85301208496094, 11.46579647064209)
-        }
-    elseif level >= 15 and level <= 29 then
-        return {
-            Mon = "Gorilla",
-            LevelQuest = 2,
-            NameQuest = "JungleQuest",
-            NameMon = "Gorilla",
-            CFrameQuest = CFrame.new(-1598.08911, 35.5501175, 153.377838, 0, 0, 1, 0, 1, -0, -1, 0, 0),
-            CFrameMon = CFrame.new(-1129.8836669921875, 40.46354675292969, -525.4237060546875)
-        }
-    elseif level >= 30 and level <= 39 then
-        return {
-            Mon = "Pirate",
-            LevelQuest = 1,
-            NameQuest = "BuggyQuest1",
-            NameMon = "Pirate",
-            CFrameQuest = CFrame.new(-1141.07483, 4.10001802, 3831.5498, 0.965929627, -0, -0.258804798, 0, 1, -0, 0.258804798, 0, 0.965929627),
-            CFrameMon = CFrame.new(-1103.513427734375, 13.752052307128906, 3896.091064453125)
-        }
-    elseif level >= 40 and level <= 59 then
-        return {
-            Mon = "Brute",
-            LevelQuest = 2,
-            NameQuest = "BuggyQuest1",
-            NameMon = "Brute",
-            CFrameQuest = CFrame.new(-1141.07483, 4.10001802, 3831.5498, 0.965929627, -0, -0.258804798, 0, 1, -0, 0.258804798, 0, 0.965929627),
-            CFrameMon = CFrame.new(-1140.083740234375, 14.809885025024414, 4322.92138671875)
-        }
-    elseif level >= 60 and level <= 74 then
-        return {
-            Mon = "Desert Bandit",
-            LevelQuest = 1,
-            NameQuest = "DesertQuest",
-            NameMon = "Desert Bandit",
-            CFrameQuest = CFrame.new(894.488647, 5.14000702, 4392.43359, 0.819155693, -0, -0.573571265, 0, 1, -0, 0.573571265, 0, 0.819155693),
-            CFrameMon = CFrame.new(924.7998046875, 6.44867467880249, 4481.5859375)
-        }
-    elseif level >= 75 and level <= 89 then
-        return {
-            Mon = "Desert Officer",
-            LevelQuest = 2,
-            NameQuest = "DesertQuest",
-            NameMon = "Desert Officer",
-            CFrameQuest = CFrame.new(894.488647, 5.14000702, 4392.43359, 0.819155693, -0, -0.573571265, 0, 1, -0, 0.573571265, 0, 0.819155693),
-            CFrameMon = CFrame.new(1608.2822265625, 8.614224433898926, 4371.00732421875)
-        }
-    elseif level >= 90 and level <= 99 then
-        return {
-            Mon = "Snow Bandit",
-            LevelQuest = 1,
-            NameQuest = "SnowQuest",
-            NameMon = "Snow Bandit",
-            CFrameQuest = CFrame.new(1389.74451, 88.1519318, -1298.90796, -0.342042685, 0, 0.939684391, 0, 1, 0, -0.939684391, 0, -0.342042685),
-            CFrameMon = CFrame.new(1354.347900390625, 87.27277374267578, -1393.946533203125)
-        }
-    elseif level >= 100 and level <= 119 then
-        return {
-            Mon = "Snowman",
-            LevelQuest = 2,
-            NameQuest = "SnowQuest",
-            NameMon = "Snowman",
-            CFrameQuest = CFrame.new(1389.74451, 88.1519318, -1298.90796, -0.342042685, 0, 0.939684391, 0, 1, 0, -0.939684391, 0, -0.342042685),
-            CFrameMon = CFrame.new(1201.6412353515625, 144.57958984375, -1550.0670166015625)
-        }
-    elseif level >= 120 and level <= 149 then
-        return {
-            Mon = "Chief Petty Officer",
-            LevelQuest = 1,
-            NameQuest = "MarineQuest2",
-            NameMon = "Chief Petty Officer",
-            CFrameQuest = CFrame.new(-5039.58643, 27.3500385, 4324.68018, 0, 0, -1, 0, 1, 0, 1, 0, 0),
-            CFrameMon = CFrame.new(-4881.23095703125, 22.65204429626465, 4273.75244140625)
-        }
-    elseif level >= 150 and level <= 174 then
-        return {
-            Mon = "Sky Bandit",
-            LevelQuest = 1,
-            NameQuest = "SkyQuest",
-            NameMon = "Sky Bandit",
-            CFrameQuest = CFrame.new(-4839.53027, 716.368591, -2619.44165, 0.866007268, 0, 0.500031412, 0, 1, 0, -0.500031412, 0, 0.866007268),
-            CFrameMon = CFrame.new(-4953.20703125, 295.74420166015625, -2899.22900390625)
-        }
-    elseif level >= 175 and level <= 189 then
-        return {
-            Mon = "Dark Master",
-            LevelQuest = 2,
-            NameQuest = "SkyQuest",
-            NameMon = "Dark Master",
-            CFrameQuest = CFrame.new(-4839.53027, 716.368591, -2619.44165, 0.866007268, 0, 0.500031412, 0, 1, 0, -0.500031412, 0, 0.866007268),
-            CFrameMon = CFrame.new(-5259.8447265625, 391.3976745605469, -2229.035400390625)
-        }
-    elseif level >= 190 and level <= 209 then
-        return {
-            Mon = "Prisoner",
-            LevelQuest = 1,
-            NameQuest = "PrisonerQuest",
-            NameMon = "Prisoner",
-            CFrameQuest = CFrame.new(5308.93115, 1.65517521, 475.120514, -0.0894274712, -5.00292918e-09, -0.995993316, 1.60817859e-09, 1, -5.16744869e-09, 0.995993316, -2.06384709e-09, -0.0894274712),
-            CFrameMon = CFrame.new(5098.9736328125, -0.3204058110713959, 474.2373352050781)
-        }
-    elseif level >= 210 and level <= 249 then
-        return {
-            Mon = "Dangerous Prisoner",
-            LevelQuest = 2,
-            NameQuest = "PrisonerQuest",
-            NameMon = "Dangerous Prisoner",
-            CFrameQuest = CFrame.new(5308.93115, 1.65517521, 475.120514, -0.0894274712, -5.00292918e-09, -0.995993316, 1.60817859e-09, 1, -5.16744869e-09, 0.995993316, -2.06384709e-09, -0.0894274712),
-            CFrameMon = CFrame.new(5654.5634765625, 15.633401870727539, 866.2991943359375)
-        }
-    elseif level >= 250 and level <= 274 then
-        return {
-            Mon = "Toga Warrior",
-            LevelQuest = 1,
-            NameQuest = "ColosseumQuest",
-            NameMon = "Toga Warrior",
-            CFrameQuest = CFrame.new(-1580.04663, 6.35000277, -2986.47534, -0.515037298, 0, -0.857167721, 0, 1, 0, 0.857167721, 0, -0.515037298),
-            CFrameMon = CFrame.new(-1820.21484375, 51.68385696411133, -2740.6650390625)
-        }
-    elseif level >= 275 and level <= 299 then
-        return {
-            Mon = "Gladiator",
-            LevelQuest = 2,
-            NameQuest = "ColosseumQuest",
-            NameMon = "Gladiator",
-            CFrameQuest = CFrame.new(-1580.04663, 6.35000277, -2986.47534, -0.515037298, 0, -0.857167721, 0, 1, 0, 0.857167721, 0, -0.515037298),
-            CFrameMon = CFrame.new(-1292.838134765625, 56.380882263183594, -3339.031494140625)
-        }
-    elseif level >= 300 and level <= 324 then
-        return {
-            Mon = "Military Soldier",
-            LevelQuest = 1,
-            NameQuest = "MagmaQuest",
-            NameMon = "Military Soldier",
-            CFrameQuest = CFrame.new(-5313.37012, 10.9500084, 8515.29395, -0.499959469, 0, 0.866048813, 0, 1, 0, -0.866048813, 0, -0.499959469),
-            CFrameMon = CFrame.new(-5411.16455078125, 11.081554412841797, 8454.29296875)
-        }
-    elseif level >= 325 and level <= 374 then
-        return {
-            Mon = "Military Spy",
-            LevelQuest = 2,
-            NameQuest = "MagmaQuest",
-            NameMon = "Military Spy",
-            CFrameQuest = CFrame.new(-5313.37012, 10.9500084, 8515.29395, -0.499959469, 0, 0.866048813, 0, 1, 0, -0.866048813, 0, -0.499959469),
-            CFrameMon = CFrame.new(-5802.8681640625, 86.26241302490234, 8828.859375)
-        }
-    elseif level >= 375 and level <= 399 then
-        return {
-            Mon = "Fishman Warrior",
-            LevelQuest = 1,
-            NameQuest = "FishmanQuest",
-            NameMon = "Fishman Warrior",
-            CFrameQuest = CFrame.new(61122.65234375, 18.497442245483, 1569.3997802734),
-            CFrameMon = CFrame.new(60878.30078125, 18.482830047607422, 1543.7574462890625)
-        }
-    elseif level >= 400 and level <= 449 then
-        return {
-            Mon = "Fishman Commando",
-            LevelQuest = 2,
-            NameQuest = "FishmanQuest",
-            NameMon = "Fishman Commando",
-            CFrameQuest = CFrame.new(61122.65234375, 18.497442245483, 1569.3997802734),
-            CFrameMon = CFrame.new(61922.6328125, 18.482830047607422, 1493.934326171875)
-        }
-    elseif level >= 450 and level <= 474 then
-        return {
-            Mon = "God's Guard",
-            LevelQuest = 1,
-            NameQuest = "SkyExp1Quest",
-            NameMon = "God's Guard",
-            CFrameQuest = CFrame.new(-4721.88867, 843.874695, -1949.96643, 0.996191859, -0, -0.0871884301, 0, 1, -0, 0.0871884301, 0, 0.996191859),
-            CFrameMon = CFrame.new(-4710.04296875, 845.2769775390625, -1927.3079833984375)
-        }
-    elseif level >= 475 and level <= 524 then
-        return {
-            Mon = "Shanda",
-            LevelQuest = 2,
-            NameQuest = "SkyExp1Quest",
-            NameMon = "Shanda",
-            CFrameQuest = CFrame.new(-7859.09814, 5544.19043, -381.476196, -0.422592998, 0, 0.906319618, 0, 1, 0, -0.906319618, 0, -0.422592998),
-            CFrameMon = CFrame.new(-7678.48974609375, 5566.40380859375, -497.2156066894531)
-        }
-    elseif level >= 525 and level <= 549 then
-        return {
-            Mon = "Royal Squad",
-            LevelQuest = 1,
-            NameQuest = "SkyExp2Quest",
-            NameMon = "Royal Squad",
-            CFrameQuest = CFrame.new(-7906.81592, 5634.6626, -1411.99194, 0, 0, -1, 0, 1, 0, 1, 0, 0),
-            CFrameMon = CFrame.new(-7624.25244140625, 5658.13330078125, -1467.354248046875)
-        }
-    elseif level >= 550 and level <= 624 then
-        return {
-            Mon = "Royal Soldier",
-            LevelQuest = 2,
-            NameQuest = "SkyExp2Quest",
-            NameMon = "Royal Soldier",
-            CFrameQuest = CFrame.new(-7906.81592, 5634.6626, -1411.99194, 0, 0, -1, 0, 1, 0, 1, 0, 0),
-            CFrameMon = CFrame.new(-7836.75341796875, 5645.6640625, -1790.6236572265625)
-        }
-    elseif level >= 625 and level <= 649 then
-        return {
-            Mon = "Galley Pirate",
-            LevelQuest = 1,
-            NameQuest = "FountainQuest",
-            NameMon = "Galley Pirate",
-            CFrameQuest = CFrame.new(5259.81982, 37.3500175, 4050.0293, 0.087131381, 0, 0.996196866, 0, 1, 0, -0.996196866, 0, 0.087131381),
-            CFrameMon = CFrame.new(5551.02197265625, 78.90135192871094, 3930.412841796875)
-        }
-    elseif level >= 650 then
-        return {
-            Mon = "Galley Captain",
-            LevelQuest = 2,
-            NameQuest = "FountainQuest",
-            NameMon = "Galley Captain",
-            CFrameQuest = CFrame.new(5259.81982, 37.3500175, 4050.0293, 0.087131381, 0, 0.996196866, 0, 1, 0, -0.996196866, 0, 0.087131381),
-            CFrameMon = CFrame.new(5441.95166015625, 42.50205993652344, 4950.09375)
-        }
-    end
-    return nil
-end
-
--- Função de auto farm (revisada e robusta)
-local function StartAutoFarm()
-    if _G.FarmConnection then
-        task.cancel(_G.FarmConnection)
-        _G.FarmConnection = nil
-    end
-    _G.FarmConnection = task.spawn(function()
-        while _G.AutoFarm do
-            local success, err = pcall(function()
-                -- 1. Verificar nível
-                local level = CheckLevel()
-                if not level then
-                    task.wait(2)
-                    return
-                end
-
-                -- 2. Se o nível mudou, pegar nova quest
-                if level ~= _G.LastLevel then
-                    _G.LastLevel = level
-                    local quest = GetQuestByLevel(level)
-                    if quest then
-                        _G.CurrentQuest = quest
-                        -- Iniciar a quest
-                        local args = {"StartQuest", quest.NameQuest, quest.LevelQuest}
-                        ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(args))
-                        
-                        -- Teleport para ilhas distantes (se necessário)
-                        if quest.CFrameQuest and player.Character then
-                            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-                            if hrp then
-                                local dist = (hrp.Position - quest.CFrameQuest.Position).Magnitude
-                                if dist > 10000 then
-                                    if quest.NameQuest == "FishmanQuest" or quest.NameQuest == "SkyExp1Quest" then
-                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("requestEntrance", quest.CFrameQuest.Position)
-                                        task.wait(5)
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-
-                -- 3. Se não tem quest atual, aguardar
-                if not _G.CurrentQuest or not _G.CurrentQuest.NameMon then
-                    task.wait(2)
-                    return
-                end
-
-                -- 4. Procurar mobs da quest
-                local enemies = Workspace:FindFirstChild("Enemies")
-                if not enemies then
-                    task.wait(2)
-                    return
-                end
-
-                local character = player.Character
-                if not character then
-                    task.wait(2)
-                    return
-                end
-
-                local targetMob = nil
-                local targetHrp = nil
-                for _, mob in pairs(enemies:GetChildren()) do
-                    local hrp = mob:FindFirstChild("HumanoidRootPart")
-                    local hum = mob:FindFirstChild("Humanoid")
-                    if hrp and hum and hum.Health > 0 then
-                        if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
-                            targetMob = mob
-                            targetHrp = hrp
-                            break
-                        end
-                    end
-                end
-
-                -- 5. Se não encontrou mob, tenta ir para o CFrameMon
-                if not targetHrp then
-                    if _G.CurrentQuest.CFrameMon then
-                        TweenTo(_G.CurrentQuest.CFrameMon * CFrame.new(0, 20, 0), _G.TweenSpeed)
-                        task.wait(3) -- espera chegar
-                        -- Procura novamente
-                        for _, mob in pairs(enemies:GetChildren()) do
-                            local hrp = mob:FindFirstChild("HumanoidRootPart")
-                            local hum = mob:FindFirstChild("Humanoid")
-                            if hrp and hum and hum.Health > 0 then
-                                if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
-                                    targetMob = mob
-                                    targetHrp = hrp
-                                    break
-                                end
-                            end
-                        end
-                    else
-                        task.wait(2)
-                        return
-                    end
-                end
-
-                -- 6. Se ainda não tem mob, aguarda spawn
-                if not targetHrp then
-                    task.wait(3)
-                    return
-                end
-
-                -- 7. Tween para cima do mob
-                TweenTo(targetHrp.CFrame * CFrame.new(0, 20, 0), _G.TweenSpeed)
-                task.wait(1)
-
-                -- 8. Bring mobs se ativado
-                if _G.BringMobs then
-                    local pulled = 0
-                    for _, mob in pairs(enemies:GetChildren()) do
-                        if pulled >= 5 then break end
-                        local hrp = mob:FindFirstChild("HumanoidRootPart")
-                        local hum = mob:FindFirstChild("Humanoid")
-                        if hrp and hum and hum.Health > 0 then
-                            if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
-                                hrp.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, -15, 0)
-                                pulled = pulled + 1
-                            end
-                        end
-                    end
-                end
-
-                -- 9. Espera o mob morrer (ou timeout)
-                local startTime = tick()
-                while targetMob and targetMob:FindFirstChild("Humanoid") and targetMob.Humanoid.Health > 0 do
-                    if tick() - startTime > 30 then break end
-                    task.wait(0.5)
-                end
-
-                -- 10. Conta quantos morreram (aproximado)
-                local deadCount = 0
-                for _, mob in pairs(enemies:GetChildren()) do
-                    local hum = mob:FindFirstChild("Humanoid")
-                    if hum and hum.Health <= 0 then
-                        if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
-                            deadCount = deadCount + 1
-                        end
-                    end
-                end
-
-                -- 11. Se matou 8 ou mais, o próximo loop verificará o nível
-                if deadCount >= 8 then
-                    -- Não faz nada, o loop vai verificar o nível no início
-                end
-
-            end) -- pcall
-
-            if not success then
-                warn("Erro no auto farm:", err)
-            end
-
-            task.wait(0.5)
-        end
-    end)
-end
-
--- Função de auto chest tween (corrigida: escolhe um baú e marca como visitado)
-local function StartAutoChestTween()
-    if _G.ChestTweenConnection then
-        task.cancel(_G.ChestTweenConnection)
-        _G.ChestTweenConnection = nil
-    end
-    _G.ChestTweenConnection = task.spawn(function()
-        while _G.AutoChestTween do
-            pcall(function()
-                local character = player.Character
-                if not character then return end
-
-                -- Encontrar todos os baús não visitados neste ciclo
-                local chests = {}
-                for _, v in pairs(Workspace:GetDescendants()) do
-                    if v:IsA("BasePart") and (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") then
-                        local key = tostring(v.Position)
-                        if not _G.VisitedChests[key] then
-                            table.insert(chests, v)
-                        end
-                    end
-                end
-
-                if #chests > 0 then
-                    -- Escolher o baú mais próximo
-                    local closest = nil
-                    local closestDist = math.huge
-                    for _, chest in pairs(chests) do
-                        local dist = (character.HumanoidRootPart.Position - chest.Position).Magnitude
-                        if dist < closestDist then
-                            closestDist = dist
-                            closest = chest
-                        end
-                    end
-
-                    if closest then
-                        -- Tween até o baú
-                        TweenTo(closest.CFrame * CFrame.new(0, 2, 0), _G.TweenSpeed)
-                        -- Marcar como visitado para não repetir no mesmo ciclo
-                        _G.VisitedChests[tostring(closest.Position)] = true
-                        task.wait(1) -- pausa para coleta
-                    end
-                else
-                    -- Se todos foram visitados, esperar 1 minuto e resetar
-                    task.wait(60)
-                    _G.VisitedChests = {}
-                end
-            end)
-            task.wait(1)
-        end
-    end)
-end
-
--- Função de auto chest teleporte (ban risk) - corrigido para não repetir no mesmo ciclo
-local function StartAutoChestTP()
-    if _G.ChestTPConnection then
-        task.cancel(_G.ChestTPConnection)
-        _G.ChestTPConnection = nil
-    end
-    _G.ChestTPConnection = task.spawn(function()
-        while _G.AutoChestTP do
-            pcall(function()
-                local character = player.Character
-                if not character then return end
-
-                -- Encontrar baús
-                local chests = {}
-                for _, v in pairs(Workspace:GetDescendants()) do
-                    if v:IsA("BasePart") and (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") then
-                        table.insert(chests, v)
-                    end
-                end
-
-                if #chests > 0 then
-                    -- Escolher o mais próximo (ou o primeiro, tanto faz)
-                    local target = chests[1]
-                    character.HumanoidRootPart.CFrame = target.CFrame * CFrame.new(0, 2, 0)
-                    _G.ChestTPCount = _G.ChestTPCount + 1
-                    task.wait(0.5)
-
-                    -- Se já fez 3 teleportes, resetar player
-                    if _G.ChestTPCount >= 3 then
-                        character.Humanoid.Health = 0
-                        _G.ChestTPCount = 0
-                        task.wait(5) -- espera respawnar
-                    end
-                else
-                    task.wait(5)
-                end
-            end)
-            task.wait(1)
-        end
     end)
 end
 
@@ -843,12 +707,12 @@ Tabs.Farm:AddToggle("AutoEquip", {
 
 Tabs.Farm:AddToggle("AutoFarm", {
     Title = "Auto Farm",
-    Description = "Faz farm automático de níveis",
+    Description = "Faz farm automático de níveis (tween contínuo, bring mobs funcional)",
     Default = false,
     Callback = function(Value)
         _G.AutoFarm = Value
         if Value then
-            _G.LastLevel = CheckLevel() or 0
+            _G.LastQuestLevel = CheckLevel() or 0
             StartAutoFarm()
         end
     end
@@ -856,7 +720,7 @@ Tabs.Farm:AddToggle("AutoFarm", {
 
 Tabs.Farm:AddToggle("BringMobs", {
     Title = "Bring Mobs",
-    Description = "Puxa os mobs para perto de você",
+    Description = "Puxa os mobs para perto de você (funciona com Auto Farm)",
     Default = false,
     Callback = function(Value)
         _G.BringMobs = Value
@@ -864,9 +728,52 @@ Tabs.Farm:AddToggle("BringMobs", {
 })
 
 -- Aba Frutas
+Tabs.Fruits:AddToggle("AutoStore", {
+    Title = "Auto Store Frutas",
+    Description = "Armazena frutas automaticamente (0.3s - MALICIOSO)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoStore = Value
+        if Value then
+            task.spawn(function()
+                while _G.AutoStore do
+                    pcall(function()
+                        local CommF = ReplicatedStorage.Remotes.CommF_
+                        local backpack = player.Backpack
+                        local character = player.Character
+                        
+                        for _, tool in pairs(backpack:GetChildren()) do
+                            if tool:IsA("Tool") then
+                                for _, fruitName in pairs(frutas) do
+                                    if tool.Name:find(fruitName) or tool.Name == fruitName then
+                                        CommF:InvokeServer("StoreFruit", fruitName, tool)
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                        
+                        for _, tool in pairs(character:GetChildren()) do
+                            if tool:IsA("Tool") then
+                                for _, fruitName in pairs(frutas) do
+                                    if tool.Name:find(fruitName) or tool.Name == fruitName then
+                                        CommF:InvokeServer("StoreFruit", fruitName, tool)
+                                        break
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                    task.wait(0.3)
+                end
+            end)
+        end
+    end
+})
+
 Tabs.Fruits:AddToggle("SpinFruit", {
-    Title = "Spin Fruit",
-    Description = "Compra spin de fruta a cada 2 horas",
+    Title = "Spin Fruit Automático",
+    Description = "Executa spin a cada 2 horas (uso consciente)",
     Default = false,
     Callback = function(Value)
         _G.SpinFruit = Value
@@ -875,24 +782,6 @@ Tabs.Fruits:AddToggle("SpinFruit", {
         end
     end
 })
-
--- Aba Loja
-for _, itemName in ipairs(shopItems) do
-    Tabs.Shop:AddButton({
-        Title = "Comprar " .. itemName,
-        Description = "Compra " .. itemName .. " na loja",
-        Callback = function()
-            pcall(function()
-                ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyItem", itemName)
-                Fluent:Notify({
-                    Title = "Loja",
-                    Content = itemName .. " comprado!",
-                    Duration = 3
-                })
-            end)
-        end
-    })
-end
 
 -- Aba Baús
 Tabs.Chest:AddToggle("AutoChestTween", {
@@ -972,6 +861,24 @@ Tabs.Status:AddToggle("AutoStatus", {
         end
     end
 })
+
+-- Aba Loja
+for _, item in ipairs(shopItems) do
+    Tabs.Shop:AddButton({
+        Title = "Comprar " .. item.Name,
+        Description = "Compra " .. item.Name .. " (se disponível)",
+        Callback = function()
+            pcall(function()
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyItem", item.RemoteArg)
+                Fluent:Notify({
+                    Title = "Loja",
+                    Content = item.Name .. " comprado!",
+                    Duration = 3
+                })
+            end)
+        end
+    })
+end
 
 -- Aba Configurações
 Tabs.Config:AddDropdown("TweenSpeed", {
@@ -1098,13 +1005,13 @@ Tabs.Extras:AddButton({
 
 Tabs.Extras:AddButton({
     Title = "Redeem All Codes",
-    Description = "Resgata todos os códigos de uma vez",
+    Description = "Resgata todos os códigos disponíveis",
     Callback = RedeemAllCodes
 })
 
 Tabs.Extras:AddParagraph({
     Title = "📌 CRÉDITOS",
-    Content = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: 7.5 Fluent\nObrigado por usar nosso hub!"
+    Content = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: 8.0 Fluent Corrigida\nObrigado por usar nosso hub!"
 })
 
 --------------------------------------------------
