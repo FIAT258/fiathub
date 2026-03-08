@@ -5,10 +5,10 @@
     ██╔══██╗██║     ██║   ██║ ██╔██╗ 
     ██████╔╝███████╗╚██████╔╝██╔╝ ██╗
     ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═╝
-    
+
     BLOX FRUITS HUB - FLUENT INTERFACE
     by Lorenzo, JX1 & DeepSeek
-    Versão 7.0 - Completa e Corrigida
+    Versão 7.5 - Corrigida e Otimizada
 ]]
 
 --// CARREGAR FLUENT
@@ -43,8 +43,15 @@ _G.TweenSpeed = 250
 _G.WalkSpeedValue = 16
 _G.CurrentQuest = {}
 _G.LastLevel = 0
-_G.VisitedChests = {}
+_G.VisitedChests = {}  -- para o modo tween não repetir
 _G.ChestTPCount = 0
+_G.FarmConnection = nil
+_G.AttackConnection = nil
+_G.BusoConnection = nil
+_G.ChestTweenConnection = nil
+_G.ChestTPConnection = nil
+_G.SpeedConnection = nil
+_G.SpinConnection = nil
 
 --// LISTA DE COMBATES
 local combatStyles = {
@@ -61,10 +68,10 @@ local shopItems = {
 
 --// CRIAR JANELA
 local Window = Fluent:CreateWindow({
-    Title = "XFIREX HUB (BLOX FRUITS) 1 SEA",
+    Title = "XFIREX HUB 1 SEA",
     SubTitle = "by Lorenzo, JX1 & DeepSeek",
     TabWidth = 140,
-    Size = UDim2.fromOffset(470, 480),
+    Size = UDim2.fromOffset(460, 480),
     Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
@@ -102,7 +109,7 @@ local function CheckLevel()
     return success and level or nil
 end
 
--- Função para criar tween suave
+-- Função para criar tween suave (com segurança)
 local function TweenTo(goalCFrame, speed)
     local character = player.Character
     if not character then return end
@@ -111,6 +118,7 @@ local function TweenTo(goalCFrame, speed)
     
     local distance = (hrp.Position - goalCFrame.Position).Magnitude
     local time = distance / speed
+    if time > 20 then time = 20 end -- limite de tempo para não travar
     
     local tweenInfo = TweenInfo.new(time, Enum.EasingStyle.Linear)
     local goal = {CFrame = goalCFrame}
@@ -121,7 +129,11 @@ end
 
 -- Função de auto attack (exata)
 local function StartAutoAttack()
-    task.spawn(function()
+    if _G.AttackConnection then
+        task.cancel(_G.AttackConnection)
+        _G.AttackConnection = nil
+    end
+    _G.AttackConnection = task.spawn(function()
         local enemies = workspace:WaitForChild("Enemies")
         local function GetCharacter()
             local char = player.Character or player.CharacterAdded:Wait()
@@ -166,6 +178,11 @@ end
 
 -- Função de auto buso (corrigida)
 local function StartAutoBuso()
+    if _G.BusoConnection then
+        _G.BusoConnection:Disconnect()
+        _G.BusoConnection = nil
+    end
+    
     local function ActivateBuso()
         pcall(function()
             ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
@@ -174,22 +191,21 @@ local function StartAutoBuso()
     
     ActivateBuso()
     
-    local connection
-    connection = player.CharacterAdded:Connect(function()
+    _G.BusoConnection = player.CharacterAdded:Connect(function()
         if _G.AutoBuso then
             task.wait(6)
             ActivateBuso()
-        else
-            if connection then
-                connection:Disconnect()
-            end
         end
     end)
 end
 
 -- Função de auto speed
 local function StartAutoSpeed()
-    task.spawn(function()
+    if _G.SpeedConnection then
+        task.cancel(_G.SpeedConnection)
+        _G.SpeedConnection = nil
+    end
+    _G.SpeedConnection = task.spawn(function()
         while _G.AutoSpeed do
             pcall(function()
                 local character = player.Character
@@ -205,7 +221,85 @@ local function StartAutoSpeed()
     end)
 end
 
--- Função de auto farm (com lista completa de quests)
+-- Função de spin fruit
+local function StartSpinFruit()
+    if _G.SpinConnection then
+        task.cancel(_G.SpinConnection)
+        _G.SpinConnection = nil
+    end
+    _G.SpinConnection = task.spawn(function()
+        while _G.SpinFruit do
+            pcall(function()
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("Cousin", "Buy", "DLCBoxData")
+            end)
+            task.wait(7200) -- 2 horas
+        end
+    end)
+end
+
+-- Função para remover texturas (melhorada)
+local function RemoveTextures()
+    pcall(function()
+        for _, v in pairs(Workspace:GetDescendants()) do
+            if v:IsA("Texture") or v:IsA("Decal") then
+                v:Destroy()
+            end
+        end
+        for _, v in pairs(Lighting:GetDescendants()) do
+            if v:IsA("Texture") or v:IsA("Decal") then
+                v:Destroy()
+            end
+        end
+        -- Opcional: remover também de partes específicas
+        for _, v in pairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Texture = ""
+                v.Material = Enum.Material.Plastic
+            end
+        end
+        Fluent:Notify({
+            Title = "Texturas",
+            Content = "Todas as texturas foram removidas!",
+            Duration = 3
+        })
+    end)
+end
+
+-- Função para resgatar códigos
+local function RedeemAllCodes()
+    local codes = {
+        "fruitconcepts", "krazydares", "TRIPLEABUSE", "SEATROLLING", "ADMINFIGHT",
+        "BANEXPLOIT", "GetPranked", "BossBuild", "1LOSTADMIN", "GIFTING_HOURS",
+        "NOMOREHACK", "EARN_FRUITS", "FIGHT4FRUIT", "SUB2OFFICIALNOOBIE",
+        "STRAWHATMAINE", "SUB2NOOBMASTER123", "JCWK", "KITTGAMING", "MagicBus",
+        "BLUXXY", "LIGHTNINGABUSE", "KITT_RESET", "SUB2CAPTAINMAUI", "SUB2FER999",
+        "ENYU_IS_PRO", "STARCODEHEO", "FUDD10_V2", "SUB2GAMERROBOT_EXP1",
+        "SUB2GAMERROBOT_RESET1", "SUB2UNCLEKIZARU", "SUB2DAIGROCK", "AXIORE",
+        "TANTAIGAMING", "NOEXPLOITER", "NOOB2ADMIN", "CODESLIDE", "ADMINHACKED",
+        "ADMINDARES", "NEWTROLL", "REWARDFUN", "24NOADMIN", "GAMER_ROBOT_1M",
+        "SUBGAMERROBOT_RESET", "GAMERROBOT_YT", "TY_FOR_WATCHING", "EXP_5B",
+        "RESET_5B", "UPD16", "3BVISITS", "2BILLION", "UPD15", "BIGNEWS"
+    }
+    
+    local redeemRemote = ReplicatedStorage.Remotes.Redeem
+    task.spawn(function()
+        for i, code in ipairs(codes) do
+            pcall(function()
+                redeemRemote:InvokeServer(code)
+            end)
+            if i < #codes then
+                task.wait(0.3)
+            end
+        end
+        Fluent:Notify({
+            Title = "Códigos",
+            Content = "Todos os códigos foram resgatados!",
+            Duration = 5
+        })
+    end)
+end
+
+-- Função para obter quest por nível (lista completa do usuário)
 local function GetQuestByLevel(level)
     if level >= 1 and level <= 9 then
         return {
@@ -445,50 +539,67 @@ local function GetQuestByLevel(level)
     return nil
 end
 
--- Função de auto farm
+-- Função de auto farm (revisada e robusta)
 local function StartAutoFarm()
-    task.spawn(function()
+    if _G.FarmConnection then
+        task.cancel(_G.FarmConnection)
+        _G.FarmConnection = nil
+    end
+    _G.FarmConnection = task.spawn(function()
         while _G.AutoFarm do
-            pcall(function()
+            local success, err = pcall(function()
+                -- 1. Verificar nível
                 local level = CheckLevel()
                 if not level then
-                    task.wait(1)
+                    task.wait(2)
                     return
                 end
 
+                -- 2. Se o nível mudou, pegar nova quest
                 if level ~= _G.LastLevel then
                     _G.LastLevel = level
                     local quest = GetQuestByLevel(level)
                     if quest then
                         _G.CurrentQuest = quest
+                        -- Iniciar a quest
                         local args = {"StartQuest", quest.NameQuest, quest.LevelQuest}
                         ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(args))
                         
-                        -- Teleport para ilhas distantes
+                        -- Teleport para ilhas distantes (se necessário)
                         if quest.CFrameQuest and player.Character then
-                            local dist = (player.Character.HumanoidRootPart.Position - quest.CFrameQuest.Position).Magnitude
-                            if dist > 10000 then
-                                if quest.NameQuest == "FishmanQuest" or quest.NameQuest == "SkyExp1Quest" then
-                                    ReplicatedStorage.Remotes.CommF_:InvokeServer("requestEntrance", quest.CFrameQuest.Position)
-                                    task.wait(5)
+                            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                local dist = (hrp.Position - quest.CFrameQuest.Position).Magnitude
+                                if dist > 10000 then
+                                    if quest.NameQuest == "FishmanQuest" or quest.NameQuest == "SkyExp1Quest" then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("requestEntrance", quest.CFrameQuest.Position)
+                                        task.wait(5)
+                                    end
                                 end
                             end
                         end
                     end
                 end
 
-                if not _G.CurrentQuest.NameMon then
-                    task.wait(1)
+                -- 3. Se não tem quest atual, aguardar
+                if not _G.CurrentQuest or not _G.CurrentQuest.NameMon then
+                    task.wait(2)
                     return
                 end
 
+                -- 4. Procurar mobs da quest
                 local enemies = Workspace:FindFirstChild("Enemies")
-                if not enemies then return end
+                if not enemies then
+                    task.wait(2)
+                    return
+                end
 
                 local character = player.Character
-                if not character then return end
+                if not character then
+                    task.wait(2)
+                    return
+                end
 
-                -- Procurar mob da quest
                 local targetMob = nil
                 local targetHrp = nil
                 for _, mob in pairs(enemies:GetChildren()) do
@@ -503,81 +614,102 @@ local function StartAutoFarm()
                     end
                 end
 
-                if not targetHrp and _G.CurrentQuest.CFrameMon then
-                    TweenTo(_G.CurrentQuest.CFrameMon * CFrame.new(0, 20, 0), _G.TweenSpeed)
-                    task.wait(2)
-                    -- Procura novamente após chegar
-                    for _, mob in pairs(enemies:GetChildren()) do
-                        local hrp = mob:FindFirstChild("HumanoidRootPart")
-                        local hum = mob:FindFirstChild("Humanoid")
-                        if hrp and hum and hum.Health > 0 then
-                            if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
-                                targetMob = mob
-                                targetHrp = hrp
-                                break
-                            end
-                        end
-                    end
-                end
-
-                if targetHrp then
-                    -- Tween para cima do mob
-                    TweenTo(targetHrp.CFrame * CFrame.new(0, 20, 0), _G.TweenSpeed)
-
-                    -- Bring mobs
-                    if _G.BringMobs then
-                        local pulled = 0
+                -- 5. Se não encontrou mob, tenta ir para o CFrameMon
+                if not targetHrp then
+                    if _G.CurrentQuest.CFrameMon then
+                        TweenTo(_G.CurrentQuest.CFrameMon * CFrame.new(0, 20, 0), _G.TweenSpeed)
+                        task.wait(3) -- espera chegar
+                        -- Procura novamente
                         for _, mob in pairs(enemies:GetChildren()) do
-                            if pulled >= 5 then break end
                             local hrp = mob:FindFirstChild("HumanoidRootPart")
                             local hum = mob:FindFirstChild("Humanoid")
                             if hrp and hum and hum.Health > 0 then
                                 if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
-                                    hrp.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, -15, 0)
-                                    pulled = pulled + 1
+                                    targetMob = mob
+                                    targetHrp = hrp
+                                    break
                                 end
                             end
                         end
+                    else
+                        task.wait(2)
+                        return
                     end
+                end
 
-                    -- Espera o mob morrer
-                    local start = tick()
-                    while targetMob and targetMob:FindFirstChild("Humanoid") and targetMob.Humanoid.Health > 0 do
-                        if tick() - start > 30 then break end
-                        task.wait(0.5)
-                    end
+                -- 6. Se ainda não tem mob, aguarda spawn
+                if not targetHrp then
+                    task.wait(3)
+                    return
+                end
 
-                    -- Conta mortos
-                    local dead = 0
+                -- 7. Tween para cima do mob
+                TweenTo(targetHrp.CFrame * CFrame.new(0, 20, 0), _G.TweenSpeed)
+                task.wait(1)
+
+                -- 8. Bring mobs se ativado
+                if _G.BringMobs then
+                    local pulled = 0
                     for _, mob in pairs(enemies:GetChildren()) do
+                        if pulled >= 5 then break end
+                        local hrp = mob:FindFirstChild("HumanoidRootPart")
                         local hum = mob:FindFirstChild("Humanoid")
-                        if hum and hum.Health <= 0 then
+                        if hrp and hum and hum.Health > 0 then
                             if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
-                                dead = dead + 1
+                                hrp.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, -15, 0)
+                                pulled = pulled + 1
                             end
                         end
                     end
-
-                    if dead >= 8 then
-                        task.wait(1) -- Aguarda para o próximo loop verificar nível
-                    end
-                else
-                    task.wait(2)
                 end
-            end)
+
+                -- 9. Espera o mob morrer (ou timeout)
+                local startTime = tick()
+                while targetMob and targetMob:FindFirstChild("Humanoid") and targetMob.Humanoid.Health > 0 do
+                    if tick() - startTime > 30 then break end
+                    task.wait(0.5)
+                end
+
+                -- 10. Conta quantos morreram (aproximado)
+                local deadCount = 0
+                for _, mob in pairs(enemies:GetChildren()) do
+                    local hum = mob:FindFirstChild("Humanoid")
+                    if hum and hum.Health <= 0 then
+                        if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
+                            deadCount = deadCount + 1
+                        end
+                    end
+                end
+
+                -- 11. Se matou 8 ou mais, o próximo loop verificará o nível
+                if deadCount >= 8 then
+                    -- Não faz nada, o loop vai verificar o nível no início
+                end
+
+            end) -- pcall
+
+            if not success then
+                warn("Erro no auto farm:", err)
+            end
+
             task.wait(0.5)
         end
     end)
 end
 
--- Função de auto chest tween
+-- Função de auto chest tween (corrigida: escolhe um baú e marca como visitado)
 local function StartAutoChestTween()
-    task.spawn(function()
+    if _G.ChestTweenConnection then
+        task.cancel(_G.ChestTweenConnection)
+        _G.ChestTweenConnection = nil
+    end
+    _G.ChestTweenConnection = task.spawn(function()
         while _G.AutoChestTween do
             pcall(function()
                 local character = player.Character
                 if not character then return end
 
+                -- Encontrar todos os baús não visitados neste ciclo
                 local chests = {}
                 for _, v in pairs(Workspace:GetDescendants()) do
                     if v:IsA("BasePart") and (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") then
@@ -589,6 +721,7 @@ local function StartAutoChestTween()
                 end
 
                 if #chests > 0 then
+                    -- Escolher o baú mais próximo
                     local closest = nil
                     local closestDist = math.huge
                     for _, chest in pairs(chests) do
@@ -600,11 +733,14 @@ local function StartAutoChestTween()
                     end
 
                     if closest then
+                        -- Tween até o baú
                         TweenTo(closest.CFrame * CFrame.new(0, 2, 0), _G.TweenSpeed)
+                        -- Marcar como visitado para não repetir no mesmo ciclo
                         _G.VisitedChests[tostring(closest.Position)] = true
-                        task.wait(1)
+                        task.wait(1) -- pausa para coleta
                     end
                 else
+                    -- Se todos foram visitados, esperar 1 minuto e resetar
                     task.wait(60)
                     _G.VisitedChests = {}
                 end
@@ -614,14 +750,19 @@ local function StartAutoChestTween()
     end)
 end
 
--- Função de auto chest teleporte (ban risk)
+-- Função de auto chest teleporte (ban risk) - corrigido para não repetir no mesmo ciclo
 local function StartAutoChestTP()
-    task.spawn(function()
+    if _G.ChestTPConnection then
+        task.cancel(_G.ChestTPConnection)
+        _G.ChestTPConnection = nil
+    end
+    _G.ChestTPConnection = task.spawn(function()
         while _G.AutoChestTP do
             pcall(function()
                 local character = player.Character
                 if not character then return end
 
+                -- Encontrar baús
                 local chests = {}
                 for _, v in pairs(Workspace:GetDescendants()) do
                     if v:IsA("BasePart") and (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") then
@@ -630,15 +771,17 @@ local function StartAutoChestTP()
                 end
 
                 if #chests > 0 then
+                    -- Escolher o mais próximo (ou o primeiro, tanto faz)
                     local target = chests[1]
                     character.HumanoidRootPart.CFrame = target.CFrame * CFrame.new(0, 2, 0)
                     _G.ChestTPCount = _G.ChestTPCount + 1
                     task.wait(0.5)
 
+                    -- Se já fez 3 teleportes, resetar player
                     if _G.ChestTPCount >= 3 then
                         character.Humanoid.Health = 0
                         _G.ChestTPCount = 0
-                        task.wait(5)
+                        task.wait(5) -- espera respawnar
                     end
                 else
                     task.wait(5)
@@ -646,80 +789,6 @@ local function StartAutoChestTP()
             end)
             task.wait(1)
         end
-    end)
-end
-
--- Função de spin fruit
-local function StartSpinFruit()
-    task.spawn(function()
-        while _G.SpinFruit do
-            pcall(function()
-                ReplicatedStorage.Remotes.CommF_:InvokeServer("Cousin", "Buy", "DLCBoxData")
-            end)
-            task.wait(7200) -- 2 horas
-        end
-    end)
-end
-
--- Função para remover texturas (melhorada)
-local function RemoveTextures()
-    pcall(function()
-        for _, v in pairs(Workspace:GetDescendants()) do
-            if v:IsA("Texture") or v:IsA("Decal") then
-                v:Destroy()
-            end
-        end
-        for _, v in pairs(Lighting:GetDescendants()) do
-            if v:IsA("Texture") or v:IsA("Decal") then
-                v:Destroy()
-            end
-        end
-        -- Opcional: remover também de partes específicas
-        for _, v in pairs(Workspace:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.Texture = ""
-                v.Material = Enum.Material.Plastic
-            end
-        end
-        Fluent:Notify({
-            Title = "Texturas",
-            Content = "Todas as texturas foram removidas!",
-            Duration = 3
-        })
-    end)
-end
-
--- Função para resgatar códigos
-local function RedeemAllCodes()
-    local codes = {
-        "fruitconcepts", "krazydares", "TRIPLEABUSE", "SEATROLLING", "ADMINFIGHT",
-        "BANEXPLOIT", "GetPranked", "BossBuild", "1LOSTADMIN", "GIFTING_HOURS",
-        "NOMOREHACK", "EARN_FRUITS", "FIGHT4FRUIT", "SUB2OFFICIALNOOBIE",
-        "STRAWHATMAINE", "SUB2NOOBMASTER123", "JCWK", "KITTGAMING", "MagicBus",
-        "BLUXXY", "LIGHTNINGABUSE", "KITT_RESET", "SUB2CAPTAINMAUI", "SUB2FER999",
-        "ENYU_IS_PRO", "STARCODEHEO", "FUDD10_V2", "SUB2GAMERROBOT_EXP1",
-        "SUB2GAMERROBOT_RESET1", "SUB2UNCLEKIZARU", "SUB2DAIGROCK", "AXIORE",
-        "TANTAIGAMING", "NOEXPLOITER", "NOOB2ADMIN", "CODESLIDE", "ADMINHACKED",
-        "ADMINDARES", "NEWTROLL", "REWARDFUN", "24NOADMIN", "GAMER_ROBOT_1M",
-        "SUBGAMERROBOT_RESET", "GAMERROBOT_YT", "TY_FOR_WATCHING", "EXP_5B",
-        "RESET_5B", "UPD16", "3BVISITS", "2BILLION", "UPD15", "BIGNEWS"
-    }
-    
-    local redeemRemote = ReplicatedStorage.Remotes.Redeem
-    task.spawn(function()
-        for i, code in ipairs(codes) do
-            pcall(function()
-                redeemRemote:InvokeServer(code)
-            end)
-            if i < #codes then
-                task.wait(0.3)
-            end
-        end
-        Fluent:Notify({
-            Title = "Códigos",
-            Content = "Todos os códigos foram resgatados!",
-            Duration = 5
-        })
     end)
 end
 
@@ -1035,7 +1104,7 @@ Tabs.Extras:AddButton({
 
 Tabs.Extras:AddParagraph({
     Title = "📌 CRÉDITOS",
-    Content = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: 7.0 Fluent\nObrigado por usar nosso hub!"
+    Content = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: 7.5 Fluent\nObrigado por usar nosso hub!"
 })
 
 --------------------------------------------------
