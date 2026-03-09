@@ -90,7 +90,7 @@ local Window = WindUI:CreateWindow({
     Theme = "Dark",
     Resizable = true,
     SideBarWidth = 200,
-    Background = "rbxassetid://82224027035247" -- opcional
+    Background = "rbxassetid://84973708912590" -- opcional
 })
 
 -- Notificação inicial
