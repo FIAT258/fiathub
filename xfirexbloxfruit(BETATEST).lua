@@ -81,27 +81,27 @@ local shopItems = {
 
 -- Criar janela principal (igual ao exemplo)
 local Window = WindUI:CreateWindow({
-    Title = "XFIREX HUB BLOX FRUITS BETA",
-    Icon = "flame",
+    Title = "XFIREX HUB (BLOX FRUITS) beta",
+    Icon = "fire",
     Author = "Lorenzo, JX1 & DeepSeek",
     Folder = "BloxFruitsHub",
-    Size = UDim2.fromOffset(650, 550),
+    Size = UDim2.fromOffset(650, 520),
     Transparent = true,
     Theme = "Dark",
     Resizable = true,
-    SideBarWidth = 200,
-    Background = "rbxassetid://84973708912590" -- opcional
+    SideBarWidth = 220,
+    Background = "rbxassetid://121164944768475" -- opcional
 })
 
 -- Notificação inicial
 WindUI:Notify({
-    Title = "BEM VINDO MEU AMIGO :3",
+    Title = "BEM VINDO :3",
     Content = "Interface WindUI carregada!",
-    Duration = 8
+    Duration = 9
 })
 
 -- Criar abas (igual ao exemplo)
-local FarmTab = Window:Tab({ Title = "Farm", Icon = "sword" })
+local FarmTab = Window:Tab({ Title = "Farm", Icon = "accessibility" })
 local FruitTab = Window:Tab({ Title = "Frutas", Icon = "apple" })
 local ChestTab = Window:Tab({ Title = "Baús", Icon = "gift" })
 local StatusTab = Window:Tab({ Title = "Status", Icon = "bar-chart" })
