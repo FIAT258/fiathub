@@ -82,11 +82,11 @@ local shopItems = {
 -- Criar janela principal (igual ao exemplo)
 local Window = WindUI:CreateWindow({
     Title = "XFIREX HUB BLOX FRUITS BETA",
-    Icon = "logo-whats-app",
+    Icon = "flame",
     Author = "Lorenzo, JX1 & DeepSeek",
     Folder = "BloxFruitsHub",
     Size = UDim2.fromOffset(650, 550),
-    Transparent = false,
+    Transparent = true,
     Theme = "Dark",
     Resizable = true,
     SideBarWidth = 200,
