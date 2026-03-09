@@ -81,16 +81,16 @@ local shopItems = {
 
 -- Criar janela principal (igual ao exemplo)
 local Window = WindUI:CreateWindow({
-    Title = "BLOX FRUITS HUB",
+    Title = "NIGHTSHADOW HUB (blox fruit) BETA",
     Icon = "sword",
-    Author = "Lorenzo, JX1 & DeepSeek",
+    Author = "equipe do night ",
     Folder = "BloxFruitsHub",
-    Size = UDim2.fromOffset(650, 520),
+    Size = UDim2.fromOffset(600, 520),
     Transparent = true,
     Theme = "Dark",
     Resizable = true,
     SideBarWidth = 220,
-    Background = "rbxassetid://121164944768475" -- opcional
+    Background = "rbxassetid://132282775793854" -- opcional
 })
 
 -- Notificação inicial
@@ -727,14 +727,14 @@ ExtrasTab:Button({
 
 ExtrasTab:Paragraph({
     Title = "📌 CRÉDITOS",
-    Desc = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: WindUI 2.0\nObrigado por usar nosso hub!"
+    Desc = "👤 Lorenzo amigo,JX1👤 programador, dono: nightshadow club 👑 "
 })
 
 -- Notificação final
 WindUI:Notify({
-    Title = "BLOX FRUITS HUB",
+    Title = "BEM VINDO SEUS Betas",
     Content = "Hub carregado com WindUI!",
-    Duration = 5
+    Duration = 19
 })
 
 print("=== BLOX FRUITS HUB (WindUI) CARREGADO ===")
