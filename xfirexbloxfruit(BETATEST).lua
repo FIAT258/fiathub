@@ -81,23 +81,23 @@ local shopItems = {
 
 -- Criar janela principal (igual ao exemplo)
 local Window = WindUI:CreateWindow({
-    Title = "NIGHT SHADOW HUB BLOX FRUITS",
-    Icon = "sword",
-    Author = "by night shadow club",
+    Title = "XFIREX HUB BLOX FRUITS BETA",
+    Icon = "logo-whats-app",
+    Author = "Lorenzo, JX1 & DeepSeek",
     Folder = "BloxFruitsHub",
-    Size = UDim2.fromOffset(650, 520),
-    Transparent = true,
+    Size = UDim2.fromOffset(650, 550),
+    Transparent = false,
     Theme = "Dark",
     Resizable = true,
-    SideBarWidth = 220,
-    Background = "rbxassetid://132282775793854" -- opcional
+    SideBarWidth = 200,
+    Background = "rbxassetid://121164944768475" -- opcional
 })
 
 -- Notificação inicial
 WindUI:Notify({
-    Title = "BLOX FRUITS HUB",
+    Title = "BEM VINDO MEU AMIGO :3",
     Content = "Interface WindUI carregada!",
-    Duration = 4
+    Duration = 8
 })
 
 -- Criar abas (igual ao exemplo)
@@ -727,7 +727,7 @@ ExtrasTab:Button({
 
 ExtrasTab:Paragraph({
     Title = "📌 CRÉDITOS",
-    Desc = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: WindUI 2.0\nObrigado por usar nosso hub"
+    Desc = "👤 Lorenzo\n👤 JX1\n🤖 DeepSeek Interface\n\nVersão: WindUI 2.0\nObrigado por usar nosso hub!"
 })
 
 -- Notificação final
