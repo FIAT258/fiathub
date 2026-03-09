@@ -82,7 +82,7 @@ local shopItems = {
 -- Criar janela principal (igual ao exemplo)
 local Window = WindUI:CreateWindow({
     Title = "XFIREX HUB (BLOX FRUITS) beta",
-    Icon = "fire",
+    Icon = "accessibility",
     Author = "Lorenzo, JX1 & DeepSeek",
     Folder = "BloxFruitsHub",
     Size = UDim2.fromOffset(650, 520),
@@ -104,7 +104,7 @@ WindUI:Notify({
 local FarmTab = Window:Tab({ Title = "Farm", Icon = "accessibility" })
 local FruitTab = Window:Tab({ Title = "Frutas", Icon = "apple" })
 local ChestTab = Window:Tab({ Title = "Baús", Icon = "gift" })
-local StatusTab = Window:Tab({ Title = "Status", Icon = "bar-chart" })
+local StatusTab = Window:Tab({ Title = "Status", Icon = "accessibility" })
 local ShopTab = Window:Tab({ Title = "Loja", Icon = "shopping-cart" })
 local ConfigTab = Window:Tab({ Title = "Config", Icon = "settings" })
 local ExtrasTab = Window:Tab({ Title = "Extras", Icon = "star" })
