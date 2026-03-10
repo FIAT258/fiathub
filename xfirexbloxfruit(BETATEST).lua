@@ -93,6 +93,19 @@ local Window = WindUI:CreateWindow({
     Background = "rbxassetid://121164944768475" -- opcional
 })
 
+User = {
+        Enabled = true,
+        Anonymous = false,
+        Callback = function()
+            print("clicked")
+        end,
+    },
+
+
+
+
+
+
 -- Notificação inicial
 WindUI:Notify({
     Title = "BEM VINDO :3",
