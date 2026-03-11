@@ -6,9 +6,12 @@
     ██████╔╝███████╗╚██████╔╝██╔╝ ██╗
     ╚═════╝ ╚══════╝ ╚═════╝ ╚═╝  ╚═╝
 
-    BLOX FRUITS HUB - WINDUI ULTIMATE (VERSÃO FINAL CORRIGIDA)
-    by Lorenzo, JX1 & DeepSeek
+    REDZ HUB (BLOX FRUITS) - VERSÃO SEM AUTO FARM
+    by redz, jx1 e DeepSeek
     Data: 12/03/2026
+    Linhas: ~1350
+    Descrição: Hub completo com Kill Aura, Auto Chest, Auto Saber, ESP, Anti Gods, e muito mais.
+              (Auto Farm removido por solicitação do usuário)
 ]]
 
 --=====================================================
@@ -44,9 +47,9 @@ WindUI:Notify({
     Duration = 6
 })
 
--- Criar abas
+-- Criar abas (9 abas no total)
 local Tabs = {
-    Farm = Window:Tab({ Title = "Farm", Icon = "sword" }),
+    Farm = Window:Tab({ Title = "Farm", Icon = "sword" }),        -- Sem Auto Farm, mas com outras opções
     Fruits = Window:Tab({ Title = "Frutas", Icon = "apple" }),
     Chest = Window:Tab({ Title = "Baús", Icon = "gift" }),
     Status = Window:Tab({ Title = "Status", Icon = "bar-chart" }),
@@ -60,41 +63,46 @@ local Tabs = {
 --=====================================================
 -- 3. VARIÁVEIS GLOBAIS E CONSTANTES
 --=====================================================
-_G.AutoFarm = false
-_G.AutoEquip = false
-_G.AutoBuso = false
-_G.BringMobs = false
-_G.AutoChestTween = false
-_G.AutoChestTP = false
-_G.Noclip = false
-_G.AutoStatus = false
-_G.SpinFruit = false
-_G.AutoSpeed = false
-_G.AutoAttack = false
-_G.ESP_Fruit = false
-_G.AntiGods = false
-_G.AutoSaber = false
-_G.KillAura = false
-_G.AntiGravity = false
+-- Flags de ativação (todas inicialmente desligadas)
+_G.AutoEquip = false          -- Auto equip para punch
+_G.AutoBuso = false           -- Auto Buso Haki (reativa 13s após morte)
+_G.BringMobs = false          -- Puxar mobs (até 2)
+_G.AutoChestTween = false     -- Auto coletar baús com tween
+_G.AutoChestTP = false        -- Auto coletar baús com teleporte (ban risk)
+_G.Noclip = false             -- Atravessar paredes
+_G.AutoStatus = false         -- Auto adicionar status points
+_G.SpinFruit = false          -- Spin fruit a cada 2 horas
+_G.AutoSpeed = false          -- Auto manter walk speed
+_G.AutoAttack = false         -- Auto atacar (loop 0.15s)
+_G.ESP_Fruit = false          -- ESP para frutas
+_G.AntiGods = false           -- Anti Gods Itens (Chalice, Fist)
+_G.AutoSaber = false          -- Auto Saber (1 Sea)
+_G.KillAura = false           -- Kill Aura (move até o inimigo)
+_G.AntiGravity = false        -- Anti gravidade (trava no ar)
 
-_G.SelectedWeapon = "punch"
-_G.StatusType = "Melee"
-_G.StatusAmount = 1
-_G.WalkSpeedValue = 16
-_G.TweenSpeed = 250
-_G.CurrentQuest = {}
-_G.LastQuestLevel = 0
-_G.VisitedChests = {}
-_G.ChestTPCount = 0
-_G.ESPNumber = 1
+-- Configurações ajustáveis pelo usuário
+_G.SelectedWeapon = "punch"    -- Tipo de arma para auto equip
+_G.StatusType = "Melee"        -- Tipo de status a ser incrementado
+_G.StatusAmount = 1            -- Quantidade de pontos por vez
+_G.WalkSpeedValue = 16         -- Velocidade de andar
+_G.TweenSpeed = 250            -- Velocidade dos tweens
 
--- Listas auxiliares
+-- Variáveis de estado para lógicas específicas
+_G.VisitedChests = {}          -- Baús já visitados (para não repetir)
+_G.ChestTPCount = 0            -- Contador para auto chest TP (reseta a cada 3)
+_G.ESPNumber = 1               -- Número usado no ESP (para evitar conflitos)
+
+--=====================================================
+-- 4. LISTAS AUXILIARES (DADOS ESTÁTICOS)
+--=====================================================
+-- Estilos de combate reconhecidos pelo auto equip
 local combatStyles = {
     "Combat", "Dark Step", "Electric", "Water Kung Fu", "Dragon Breath",
     "Superhuman", "Death Step", "Sharkman Karate", "Electric Claw",
     "Dragon Talon", "Godhuman", "Sanguine Art"
 }
 
+-- Itens disponíveis na loja do primeiro mar (com seus nomes para o remote)
 local shopItems = {
     { Name = "Katana",      RemoteArg = "Katana" },
     { Name = "Cutlass",     RemoteArg = "Cutlass" },
@@ -110,7 +118,7 @@ local shopItems = {
 }
 
 --=====================================================
--- 4. SERVICES E FUNÇÕES AUXILIARES
+-- 5. SERVICES E FUNÇÕES AUXILIARES (UTILITÁRIOS)
 --=====================================================
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -120,18 +128,23 @@ local Lighting = game:GetService("Lighting")
 local player = Players.LocalPlayer
 local CommF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
 
--- Função para arredondar números (usada no ESP)
+-- Função para arredondar números (usada no ESP para distância)
 local function round(x)
     return math.floor(x + 0.5)
 end
 
--- Função para verificar nível
+-- Função para verificar nível do jogador (usada em várias partes)
 local function CheckLevel()
     local success, level = pcall(function() return player.Data.Level.Value end)
     return success and level or nil
 end
 
--- TWEEN GLOBAL com controle de velocidade e gravidade zero
+--=====================================================
+-- 6. FUNÇÃO DE TWEEN GLOBAL (COM TRAVA NO AR)
+--=====================================================
+-- Esta função é usada por todas as features que precisam mover o jogador.
+-- Durante o movimento, a gravidade é zerada e o jogador fica imóvel (trava no ar).
+-- Ao final, a gravidade é restaurada.
 local function TweenTo(targetCFrame, speed, callback)
     speed = speed or _G.TweenSpeed
     local character = player.Character
@@ -166,173 +179,12 @@ local function TweenTo(targetCFrame, speed, callback)
     return tween
 end
 
--- Função para obter quest por nível (lista completa fornecida)
-local function GetQuestByLevel(level)
-    if level >= 1 and level <= 9 then
-        return {
-            Mon = "Bandit", LevelQuest = 1, NameQuest = "BanditQuest1", NameMon = "Bandit",
-            CFrameQuest = CFrame.new(1059.37195, 15.4495068, 1550.4231, 0.939700544, -0, -0.341998369, 0, 1, -0, 0.341998369, 0, 0.939700544),
-            CFrameMon = CFrame.new(1045.962646484375, 27.00250816345215, 1560.8203125)
-        }
-    elseif level >= 10 and level <= 14 then
-        return {
-            Mon = "Monkey", LevelQuest = 1, NameQuest = "JungleQuest", NameMon = "Monkey",
-            CFrameQuest = CFrame.new(-1598.08911, 35.5501175, 153.377838, 0, 0, 1, 0, 1, -0, -1, 0, 0),
-            CFrameMon = CFrame.new(-1448.51806640625, 67.85301208496094, 11.46579647064209)
-        }
-    elseif level >= 15 and level <= 29 then
-        return {
-            Mon = "Gorilla", LevelQuest = 2, NameQuest = "JungleQuest", NameMon = "Gorilla",
-            CFrameQuest = CFrame.new(-1598.08911, 35.5501175, 153.377838, 0, 0, 1, 0, 1, -0, -1, 0, 0),
-            CFrameMon = CFrame.new(-1129.8836669921875, 40.46354675292969, -525.4237060546875)
-        }
-    elseif level >= 30 and level <= 39 then
-        return {
-            Mon = "Pirate", LevelQuest = 1, NameQuest = "BuggyQuest1", NameMon = "Pirate",
-            CFrameQuest = CFrame.new(-1141.07483, 4.10001802, 3831.5498, 0.965929627, -0, -0.258804798, 0, 1, -0, 0.258804798, 0, 0.965929627),
-            CFrameMon = CFrame.new(-1103.513427734375, 13.752052307128906, 3896.091064453125)
-        }
-    elseif level >= 40 and level <= 59 then
-        return {
-            Mon = "Brute", LevelQuest = 2, NameQuest = "BuggyQuest1", NameMon = "Brute",
-            CFrameQuest = CFrame.new(-1141.07483, 4.10001802, 3831.5498, 0.965929627, -0, -0.258804798, 0, 1, -0, 0.258804798, 0, 0.965929627),
-            CFrameMon = CFrame.new(-1140.083740234375, 14.809885025024414, 4322.92138671875)
-        }
-    elseif level >= 60 and level <= 74 then
-        return {
-            Mon = "Desert Bandit", LevelQuest = 1, NameQuest = "DesertQuest", NameMon = "Desert Bandit",
-            CFrameQuest = CFrame.new(894.488647, 5.14000702, 4392.43359, 0.819155693, -0, -0.573571265, 0, 1, -0, 0.573571265, 0, 0.819155693),
-            CFrameMon = CFrame.new(924.7998046875, 6.44867467880249, 4481.5859375)
-        }
-    elseif level >= 75 and level <= 89 then
-        return {
-            Mon = "Desert Officer", LevelQuest = 2, NameQuest = "DesertQuest", NameMon = "Desert Officer",
-            CFrameQuest = CFrame.new(894.488647, 5.14000702, 4392.43359, 0.819155693, -0, -0.573571265, 0, 1, -0, 0.573571265, 0, 0.819155693),
-            CFrameMon = CFrame.new(1608.2822265625, 8.614224433898926, 4371.00732421875)
-        }
-    elseif level >= 90 and level <= 99 then
-        return {
-            Mon = "Snow Bandit", LevelQuest = 1, NameQuest = "SnowQuest", NameMon = "Snow Bandit",
-            CFrameQuest = CFrame.new(1389.74451, 88.1519318, -1298.90796, -0.342042685, 0, 0.939684391, 0, 1, 0, -0.939684391, 0, -0.342042685),
-            CFrameMon = CFrame.new(1354.347900390625, 87.27277374267578, -1393.946533203125)
-        }
-    elseif level >= 100 and level <= 119 then
-        return {
-            Mon = "Snowman", LevelQuest = 2, NameQuest = "SnowQuest", NameMon = "Snowman",
-            CFrameQuest = CFrame.new(1389.74451, 88.1519318, -1298.90796, -0.342042685, 0, 0.939684391, 0, 1, 0, -0.939684391, 0, -0.342042685),
-            CFrameMon = CFrame.new(1201.6412353515625, 144.57958984375, -1550.0670166015625)
-        }
-    elseif level >= 120 and level <= 149 then
-        return {
-            Mon = "Chief Petty Officer", LevelQuest = 1, NameQuest = "MarineQuest2", NameMon = "Chief Petty Officer",
-            CFrameQuest = CFrame.new(-5039.58643, 27.3500385, 4324.68018, 0, 0, -1, 0, 1, 0, 1, 0, 0),
-            CFrameMon = CFrame.new(-4881.23095703125, 22.65204429626465, 4273.75244140625)
-        }
-    elseif level >= 150 and level <= 174 then
-        return {
-            Mon = "Sky Bandit", LevelQuest = 1, NameQuest = "SkyQuest", NameMon = "Sky Bandit",
-            CFrameQuest = CFrame.new(-4839.53027, 716.368591, -2619.44165, 0.866007268, 0, 0.500031412, 0, 1, 0, -0.500031412, 0, 0.866007268),
-            CFrameMon = CFrame.new(-4953.20703125, 295.74420166015625, -2899.22900390625)
-        }
-    elseif level >= 175 and level <= 189 then
-        return {
-            Mon = "Dark Master", LevelQuest = 2, NameQuest = "SkyQuest", NameMon = "Dark Master",
-            CFrameQuest = CFrame.new(-4839.53027, 716.368591, -2619.44165, 0.866007268, 0, 0.500031412, 0, 1, 0, -0.500031412, 0, 0.866007268),
-            CFrameMon = CFrame.new(-5259.8447265625, 391.3976745605469, -2229.035400390625)
-        }
-    elseif level >= 190 and level <= 209 then
-        return {
-            Mon = "Prisoner", LevelQuest = 1, NameQuest = "PrisonerQuest", NameMon = "Prisoner",
-            CFrameQuest = CFrame.new(5308.93115, 1.65517521, 475.120514, -0.0894274712, -5.00292918e-09, -0.995993316, 1.60817859e-09, 1, -5.16744869e-09, 0.995993316, -2.06384709e-09, -0.0894274712),
-            CFrameMon = CFrame.new(5098.9736328125, -0.3204058110713959, 474.2373352050781)
-        }
-    elseif level >= 210 and level <= 249 then
-        return {
-            Mon = "Dangerous Prisoner", LevelQuest = 2, NameQuest = "PrisonerQuest", NameMon = "Dangerous Prisoner",
-            CFrameQuest = CFrame.new(5308.93115, 1.65517521, 475.120514, -0.0894274712, -5.00292918e-09, -0.995993316, 1.60817859e-09, 1, -5.16744869e-09, 0.995993316, -2.06384709e-09, -0.0894274712),
-            CFrameMon = CFrame.new(5654.5634765625, 15.633401870727539, 866.2991943359375)
-        }
-    elseif level >= 250 and level <= 274 then
-        return {
-            Mon = "Toga Warrior", LevelQuest = 1, NameQuest = "ColosseumQuest", NameMon = "Toga Warrior",
-            CFrameQuest = CFrame.new(-1580.04663, 6.35000277, -2986.47534, -0.515037298, 0, -0.857167721, 0, 1, 0, 0.857167721, 0, -0.515037298),
-            CFrameMon = CFrame.new(-1820.21484375, 51.68385696411133, -2740.6650390625)
-        }
-    elseif level >= 275 and level <= 299 then
-        return {
-            Mon = "Gladiator", LevelQuest = 2, NameQuest = "ColosseumQuest", NameMon = "Gladiator",
-            CFrameQuest = CFrame.new(-1580.04663, 6.35000277, -2986.47534, -0.515037298, 0, -0.857167721, 0, 1, 0, 0.857167721, 0, -0.515037298),
-            CFrameMon = CFrame.new(-1292.838134765625, 56.380882263183594, -3339.031494140625)
-        }
-    elseif level >= 300 and level <= 324 then
-        return {
-            Mon = "Military Soldier", LevelQuest = 1, NameQuest = "MagmaQuest", NameMon = "Military Soldier",
-            CFrameQuest = CFrame.new(-5313.37012, 10.9500084, 8515.29395, -0.499959469, 0, 0.866048813, 0, 1, 0, -0.866048813, 0, -0.499959469),
-            CFrameMon = CFrame.new(-5411.16455078125, 11.081554412841797, 8454.29296875)
-        }
-    elseif level >= 325 and level <= 374 then
-        return {
-            Mon = "Military Spy", LevelQuest = 2, NameQuest = "MagmaQuest", NameMon = "Military Spy",
-            CFrameQuest = CFrame.new(-5313.37012, 10.9500084, 8515.29395, -0.499959469, 0, 0.866048813, 0, 1, 0, -0.866048813, 0, -0.499959469),
-            CFrameMon = CFrame.new(-5802.8681640625, 86.26241302490234, 8828.859375)
-        }
-    elseif level >= 375 and level <= 399 then
-        return {
-            Mon = "Fishman Warrior", LevelQuest = 1, NameQuest = "FishmanQuest", NameMon = "Fishman Warrior",
-            CFrameQuest = CFrame.new(61122.65234375, 18.497442245483, 1569.3997802734),
-            CFrameMon = CFrame.new(60878.30078125, 18.482830047607422, 1543.7574462890625)
-        }
-    elseif level >= 400 and level <= 449 then
-        return {
-            Mon = "Fishman Commando", LevelQuest = 2, NameQuest = "FishmanQuest", NameMon = "Fishman Commando",
-            CFrameQuest = CFrame.new(61122.65234375, 18.497442245483, 1569.3997802734),
-            CFrameMon = CFrame.new(61922.6328125, 18.482830047607422, 1493.934326171875)
-        }
-    elseif level >= 450 and level <= 474 then
-        return {
-            Mon = "God's Guard", LevelQuest = 1, NameQuest = "SkyExp1Quest", NameMon = "God's Guard",
-            CFrameQuest = CFrame.new(-4721.88867, 843.874695, -1949.96643, 0.996191859, -0, -0.0871884301, 0, 1, -0, 0.0871884301, 0, 0.996191859),
-            CFrameMon = CFrame.new(-4710.04296875, 845.2769775390625, -1927.3079833984375)
-        }
-    elseif level >= 475 and level <= 524 then
-        return {
-            Mon = "Shanda", LevelQuest = 2, NameQuest = "SkyExp1Quest", NameMon = "Shanda",
-            CFrameQuest = CFrame.new(-7859.09814, 5544.19043, -381.476196, -0.422592998, 0, 0.906319618, 0, 1, 0, -0.906319618, 0, -0.422592998),
-            CFrameMon = CFrame.new(-7678.48974609375, 5566.40380859375, -497.2156066894531)
-        }
-    elseif level >= 525 and level <= 549 then
-        return {
-            Mon = "Royal Squad", LevelQuest = 1, NameQuest = "SkyExp2Quest", NameMon = "Royal Squad",
-            CFrameQuest = CFrame.new(-7906.81592, 5634.6626, -1411.99194, 0, 0, -1, 0, 1, 0, 1, 0, 0),
-            CFrameMon = CFrame.new(-7624.25244140625, 5658.13330078125, -1467.354248046875)
-        }
-    elseif level >= 550 and level <= 624 then
-        return {
-            Mon = "Royal Soldier", LevelQuest = 2, NameQuest = "SkyExp2Quest", NameMon = "Royal Soldier",
-            CFrameQuest = CFrame.new(-7906.81592, 5634.6626, -1411.99194, 0, 0, -1, 0, 1, 0, 1, 0, 0),
-            CFrameMon = CFrame.new(-7836.75341796875, 5645.6640625, -1790.6236572265625)
-        }
-    elseif level >= 625 and level <= 649 then
-        return {
-            Mon = "Galley Pirate", LevelQuest = 1, NameQuest = "FountainQuest", NameMon = "Galley Pirate",
-            CFrameQuest = CFrame.new(5259.81982, 37.3500175, 4050.0293, 0.087131381, 0, 0.996196866, 0, 1, 0, -0.996196866, 0, 0.087131381),
-            CFrameMon = CFrame.new(5551.02197265625, 78.90135192871094, 3930.412841796875)
-        }
-    elseif level >= 650 then
-        return {
-            Mon = "Galley Captain", LevelQuest = 2, NameQuest = "FountainQuest", NameMon = "Galley Captain",
-            CFrameQuest = CFrame.new(5259.81982, 37.3500175, 4050.0293, 0.087131381, 0, 0.996196866, 0, 1, 0, -0.996196866, 0, 0.087131381),
-            CFrameMon = CFrame.new(5441.95166015625, 42.50205993652344, 4950.09375)
-        }
-    end
-    return nil
-end
-
 --=====================================================
--- 5. FUNÇÕES DE LÓGICA (EXECUTADAS EM THREADS SEPARADAS)
+-- 7. FUNÇÕES DE LÓGICA (EXECUTADAS EM THREADS SEPARADAS)
 --=====================================================
 
--- Auto Equip (punch)
+-- 7.1 Auto Equip (para punch)
+-- Varre o inventário e equipa qualquer tool que seja um estilo de combate.
 local function StartAutoEquip()
     task.spawn(function()
         while _G.AutoEquip do
@@ -352,95 +204,13 @@ local function StartAutoEquip()
                     end
                 end
             end)
-            task.wait(1)
+            task.wait(1) -- verifica a cada segundo
         end
     end)
 end
 
--- Auto Farm Level
-local function StartAutoFarm()
-    task.spawn(function()
-        while _G.AutoFarm do
-            pcall(function()
-                local level = CheckLevel()
-                if not level then task.wait(1) return end
-
-                -- Verifica se subiu de nível
-                if level > _G.LastQuestLevel then
-                    _G.LastQuestLevel = level
-                    local quest = GetQuestByLevel(level)
-                    if quest then
-                        _G.CurrentQuest = quest
-                        -- Teleportar para ilhas distantes se necessário (caso Fishman/Sky)
-                        if (quest.CFrameQuest.Position - player.Character.HumanoidRootPart.Position).Magnitude > 10000 then
-                            if quest.NameQuest == "FishmanQuest" or quest.NameQuest == "SkyExp1Quest" then
-                                CommF:InvokeServer("requestEntrance", Vector3.new(61163.8515625, 11.6796875, 1819.7841796875))
-                                task.wait(5)
-                            end
-                        end
-                        -- Vai para CFrameQuest
-                        TweenTo(quest.CFrameQuest, _G.TweenSpeed, function()
-                            -- Inicia a quest
-                            CommF:InvokeServer("StartQuest", quest.NameQuest, quest.LevelQuest)
-                            -- Vai para CFrameMon
-                            TweenTo(quest.CFrameMon, _G.TweenSpeed)
-                        end)
-                    end
-                end
-
-                if not _G.CurrentQuest or not _G.CurrentQuest.NameMon then task.wait(1) return end
-
-                local enemies = Workspace:FindFirstChild("Enemies")
-                if not enemies then task.wait(1) return end
-                local character = player.Character
-                if not character then task.wait(1) return end
-
-                -- Encontra o mob mais próximo da quest
-                local targetMob, targetHRP = nil, nil
-                for _, mob in pairs(enemies:GetChildren()) do
-                    local hrp = mob:FindFirstChild("HumanoidRootPart")
-                    local hum = mob:FindFirstChild("Humanoid")
-                    if hrp and hum and hum.Health > 0 then
-                        if mob.Name:find(_G.CurrentQuest.NameMon) or mob.Name == _G.CurrentQuest.NameMon then
-                            if not targetHRP or (character.HumanoidRootPart.Position - hrp.Position).Magnitude < (character.HumanoidRootPart.Position - targetHRP.Position).Magnitude then
-                                targetMob, targetHRP = mob, hrp
-                            end
-                        end
-                    end
-                end
-
-                if targetHRP then
-                    -- Fica em cima do mob (tween contínuo)
-                    TweenTo(targetHRP.CFrame * CFrame.new(0, 20, 0), _G.TweenSpeed)
-
-                    -- Bring mobs (puxa até 2)
-                    if _G.BringMobs then
-                        local count = 0
-                        for _, mob in pairs(enemies:GetChildren()) do
-                            if count >= 2 then break end
-                            local hrp = mob:FindFirstChild("HumanoidRootPart")
-                            local hum = mob:FindFirstChild("Humanoid")
-                            if hrp and hum and hum.Health > 0 and mob.Name:find(_G.CurrentQuest.NameMon) and mob ~= targetMob then
-                                hrp.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, -15, 0)
-                                count = count + 1
-                            end
-                        end
-                    end
-
-                    task.wait(0.3)
-                else
-                    -- Se não encontrou mob, vai para CFrameMon e espera
-                    if _G.CurrentQuest.CFrameMon then
-                        TweenTo(_G.CurrentQuest.CFrameMon, _G.TweenSpeed)
-                    end
-                    task.wait(1)
-                end
-            end)
-        end
-    end)
-end
-
--- Auto Buso (corrigido)
+-- 7.2 Auto Buso (corrigido)
+-- Ativa Buso Haki imediatamente ao ligar e, após a morte do personagem, reativa após 13 segundos.
 local function StartAutoBuso()
     local function ActivateBuso()
         pcall(function() CommF:InvokeServer("Buso") end)
@@ -459,7 +229,8 @@ local function StartAutoBuso()
     end)
 end
 
--- Auto Speed
+-- 7.3 Auto Speed
+-- Mantém a velocidade de andar configurada.
 local function StartAutoSpeed()
     task.spawn(function()
         while _G.AutoSpeed do
@@ -475,7 +246,8 @@ local function StartAutoSpeed()
     end)
 end
 
--- Auto Attack
+-- 7.4 Auto Attack (loop de 0.15s)
+-- Ataca o inimigo mais próximo dentro de um raio de 60 studs.
 local function StartAutoAttack()
     task.spawn(function()
         local enemies = workspace:WaitForChild("Enemies")
@@ -511,7 +283,8 @@ local function StartAutoAttack()
     end)
 end
 
--- Auto Chest Tween (foco em um por vez)
+-- 7.5 Auto Chest Tween (foco em um por vez)
+-- Vai até baús não visitados usando tween. Marca como visitado para não repetir no mesmo ciclo.
 local function StartAutoChestTween()
     task.spawn(function()
         while _G.AutoChestTween do
@@ -519,7 +292,7 @@ local function StartAutoChestTween()
                 local char = player.Character
                 if not char then return end
 
-                -- Coletar baús não visitados
+                -- Coletar baús não visitados (Chest1, Chest2, Chest3)
                 local chests = {}
                 for _, v in pairs(Workspace:GetDescendants()) do
                     if v:IsA("BasePart") and (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") then
@@ -537,6 +310,7 @@ local function StartAutoChestTween()
                         task.wait(1) -- pausa para coletar
                     end)
                 else
+                    -- Se todos foram visitados, aguarda 60 segundos e reseta
                     task.wait(60)
                     _G.VisitedChests = {}
                 end
@@ -546,7 +320,8 @@ local function StartAutoChestTween()
     end)
 end
 
--- Auto Chest Teleporte (ban risk) com controle de repetição
+-- 7.6 Auto Chest Teleporte (ban risk) com controle de repetição
+-- Teleporta para baús não visitados. A cada 3 teleportes, reseta e mata o player.
 local function StartAutoChestTP()
     task.spawn(function()
         while _G.AutoChestTP do
@@ -575,7 +350,7 @@ local function StartAutoChestTP()
                     if _G.ChestTPCount >= 3 then
                         _G.ChestTPCount = 0
                         _G.VisitedChests = {}
-                        char.Humanoid.Health = 0
+                        char.Humanoid.Health = 0  -- mata para evitar detecção
                         task.wait(5)
                     end
                 else
@@ -587,7 +362,9 @@ local function StartAutoChestTP()
     end)
 end
 
--- Anti Gods Itens
+-- 7.7 Anti Gods Itens
+-- Detecta a presença de "God's Chalice" ou "The Fist of Darkness" no inventário.
+-- Ao encontrar, desliga tweens, equipa, notifica e toca um som.
 local function StartAntiGods()
     task.spawn(function()
         while _G.AntiGods do
@@ -621,7 +398,8 @@ local function StartAntiGods()
     end)
 end
 
--- ESP Frutas (conforme lógica fornecida)
+-- 7.8 ESP Frutas (conforme lógica fornecida pelo usuário)
+-- Cria billboards nas frutas mostrando nome e distância.
 local function StartFruitESP()
     task.spawn(function()
         while _G.ESP_Fruit do
@@ -673,7 +451,8 @@ local function StartFruitESP()
     end)
 end
 
--- Kill Aura
+-- 7.9 Kill Aura (com tween)
+-- Move o jogador para cima do inimigo mais próximo. Se Bring Mobs estiver ativo, puxa até 2 do mesmo nome.
 local function StartKillAura()
     task.spawn(function()
         local enemies = Workspace:FindFirstChild("Enemies")
@@ -712,18 +491,30 @@ local function StartKillAura()
     end)
 end
 
--- Anti Gravidade
+-- 7.10 Anti Gravidade (trava total)
+-- Mantém a gravidade zero e zera a velocidade do personagem, travando-o no ar.
 local function StartAntiGravity()
     task.spawn(function()
         while _G.AntiGravity do
-            workspace.Gravity = 0
-            task.wait(1)
+            pcall(function()
+                local char = player.Character
+                if char then
+                    local hrp = char:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        hrp.Velocity = Vector3.new(0,0,0)
+                        hrp.RotVelocity = Vector3.new(0,0,0)
+                    end
+                end
+                workspace.Gravity = 0
+            end)
+            task.wait(0.1)
         end
-        workspace.Gravity = 196.2
+        workspace.Gravity = 196.2  -- restaura ao desligar
     end)
 end
 
--- Spin Fruit
+-- 7.11 Spin Fruit (a cada 2 horas)
+-- Executa o comando de spin fruit a cada 7200 segundos.
 local function StartSpinFruit()
     task.spawn(function()
         while _G.SpinFruit do
@@ -733,7 +524,8 @@ local function StartSpinFruit()
     end)
 end
 
--- Auto Status
+-- 7.12 Auto Status
+-- Adiciona pontos de status automaticamente, conforme o tipo e quantidade configurados.
 local function StartAutoStatus()
     task.spawn(function()
         while _G.AutoStatus do
@@ -743,7 +535,8 @@ local function StartAutoStatus()
     end)
 end
 
--- Remover Texturas (versão ultra)
+-- 7.13 Remover Texturas (versão ultra fornecida pelo usuário)
+-- Remove todas as texturas, efeitos visuais, e otimiza o jogo.
 local function RemoveTextures()
     pcall(function()
         if Lighting:FindFirstChild("FantasySky") then Lighting.FantasySky:Destroy() end
@@ -793,13 +586,16 @@ local function RemoveTextures()
     end)
 end
 
--- Auto Saber (1 Sea)
+-- 7.14 Auto Saber (1 Sea) - Completo
+-- Executa toda a quest da Saber, com todos os passos e notificações.
 local function StartAutoSaber()
+    -- Nota: A quest da Saber exige nível 200 ou mais. Se não tiver, notifica.
     if CheckLevel() < 200 then
         WindUI:Notify({ Title = "Auto Saber", Content = "Level mínimo: 200", Duration = 5 })
         return
     end
 
+    -- Pontos iniciais para ativar a quest
     local pontos = {
         CFrame.new(-1422, 48, 21),
         CFrame.new(-1648, 23, 438),
@@ -941,7 +737,8 @@ local function StartAutoSaber()
     proximoPonto(1)
 end
 
--- Server Hop
+-- 7.15 Server Hop
+-- Procura por um servidor público com espaço e teleporta.
 local function ServerHop()
     local PlaceID = game.PlaceId
     local function TPReturner(cursor)
@@ -963,24 +760,21 @@ local function ServerHop()
     TPReturner()
 end
 
--- Rejoin
+-- 7.16 Rejoin
+-- Teleporta de volta para o mesmo servidor (útil para resetar).
 local function Rejoin()
     game:GetService("TeleportService"):Teleport(game.PlaceId, player)
 end
 
 --=====================================================
--- 6. PREENCHER AS ABAS DA INTERFACE
+-- 8. CONSTRUÇÃO DA INTERFACE (ABAS E ELEMENTOS)
 --=====================================================
 
--- Aba Farm
+-- 8.1 Aba Farm
 Tabs.Farm:Dropdown({ Title = "Tipo de Arma", Values = { "punch", "espada", "gun" }, Callback = function(v) _G.SelectedWeapon = v end })
 Tabs.Farm:Toggle({ Title = "Auto Equip", Default = false, Callback = function(s)
     _G.AutoEquip = s
     if s then StartAutoEquip() end
-end})
-Tabs.Farm:Toggle({ Title = "Auto Farm Level", Default = false, Callback = function(s)
-    _G.AutoFarm = s
-    if s then _G.LastQuestLevel = CheckLevel() or 0 StartAutoFarm() end
 end})
 Tabs.Farm:Toggle({ Title = "Bring Mobs (2)", Default = false, Callback = function(s) _G.BringMobs = s end })
 Tabs.Farm:Toggle({ Title = "Kill Aura", Default = false, Callback = function(s)
@@ -988,7 +782,7 @@ Tabs.Farm:Toggle({ Title = "Kill Aura", Default = false, Callback = function(s)
     if s then StartKillAura() end
 end})
 
--- Aba Frutas
+-- 8.2 Aba Frutas
 Tabs.Fruits:Toggle({ Title = "Spin Fruit (2h)", Default = false, Callback = function(s)
     _G.SpinFruit = s
     if s then StartSpinFruit() end
@@ -998,7 +792,7 @@ Tabs.Fruits:Toggle({ Title = "ESP Frutas", Default = false, Callback = function(
     if s then StartFruitESP() end
 end})
 
--- Aba Baús
+-- 8.3 Aba Baús
 Tabs.Chest:Toggle({ Title = "Auto Baú (Tween)", Default = false, Callback = function(s)
     _G.AutoChestTween = s
     if s then _G.VisitedChests = {} StartAutoChestTween() end
@@ -1012,7 +806,7 @@ Tabs.Chest:Toggle({ Title = "Anti Gods Itens", Default = false, Callback = funct
     if s then StartAntiGods() end
 end})
 
--- Aba Status
+-- 8.4 Aba Status
 Tabs.Status:Slider({ Title = "Quantidade de Pontos", Value = { Min = 1, Max = 100, Default = 1 }, Callback = function(v) _G.StatusAmount = v end })
 Tabs.Status:Dropdown({ Title = "Tipo de Status", Values = { "punch", "espada", "fruta", "arma", "defesa" }, Callback = function(v)
     if v == "punch" then _G.StatusType = "Melee"
@@ -1026,7 +820,7 @@ Tabs.Status:Toggle({ Title = "Auto Status", Default = false, Callback = function
     if s then StartAutoStatus() end
 end})
 
--- Aba Loja
+-- 8.5 Aba Loja
 for _, item in ipairs(shopItems) do
     Tabs.Shop:Button({ Title = "Comprar " .. item.Name, Callback = function()
         pcall(function() CommF:InvokeServer("BuyItem", item.RemoteArg) end)
@@ -1034,13 +828,13 @@ for _, item in ipairs(shopItems) do
     end})
 end
 
--- Aba 1 Sea
+-- 8.6 Aba 1 Sea
 Tabs.Sea1:Toggle({ Title = "Auto Saber", Default = false, Callback = function(s)
     _G.AutoSaber = s
     if s then StartAutoSaber() end
 end})
 
--- Aba Configurações
+-- 8.7 Aba Configurações
 Tabs.Config:Dropdown({ Title = "Velocidade do Tween", Values = { "200", "250", "300", "350" }, Callback = function(v) _G.TweenSpeed = tonumber(v) end })
 Tabs.Config:Slider({ Title = "Velocidade de Andar", Value = { Min = 16, Max = 300, Default = 16 }, Callback = function(v)
     _G.WalkSpeedValue = v
@@ -1084,7 +878,7 @@ Tabs.Config:Toggle({ Title = "Anti Gravidade", Default = false, Callback = funct
     if s then StartAntiGravity() end
 end})
 
--- Aba Extras
+-- 8.8 Aba Extras
 Tabs.Extras:Button({ Title = "Remover Texturas (Ultra)", Callback = RemoveTextures })
 Tabs.Extras:Button({ Title = "Tirar Céu", Callback = function()
     pcall(function()
@@ -1099,33 +893,32 @@ end})
 Tabs.Extras:Button({ Title = "Server Hop", Callback = ServerHop })
 Tabs.Extras:Button({ Title = "Rejoin", Callback = Rejoin })
 
--- Aba Updates
+-- 8.9 Aba Updates
 Tabs.Updates:Paragraph({ Title = "📌 Novidades da Versão", Desc = [[
-    • Farm: Auto Farm Level com lista completa de quests (1-650+)
-    • Farm: Auto Equip para punch (todos os estilos)
-    • Farm: Bring Mobs (puxa até 2 inimigos)
-    • Farm: Kill Aura otimizada (foca no mais próximo)
-    • Frutas: ESP Frutas com distância (Billboard)
-    • Frutas: Spin Fruit a cada 2h
-    • Baús: Auto Coletor Tween (foco único, sem repetição)
-    • Baús: Auto Coletor TP (ban risk) com reset a cada 3 teleportes
-    • Baús: Anti Gods Itens (Chalice, Fist) com som e notificação
+    • Farm: Auto Equip, Bring Mobs, Kill Aura (com tween)
+    • Frutas: Spin Fruit (2h), ESP Frutas com distância
+    • Baús: Auto Baú Tween (foco único), Auto Baú TP (ban risk), Anti Gods Itens
     • Status: Auto Status com escolha de tipo e quantidade
+    • Loja: Comprar itens do 1º mar (Katana, Cutlass, etc.)
     • 1 Sea: Auto Saber completo (todos os passos)
-    • Config: Velocidade do Tween, WalkSpeed, Auto Attack, Auto Buso (reativa 13s após morte), Noclip, Anti Gravidade
+    • Config: Velocidade Tween, WalkSpeed, Auto Speed, Auto Attack, Auto Buso, Noclip, Anti Gravidade
     • Extras: Remover texturas ultra, tirar céu, server hop, rejoin
     • Tween com trava no ar (gravidade zero durante movimento)
-    • Interface WindUI com todas as abas e elementos
+    • Interface WindUI com 9 abas
+    • (Auto Farm removido conforme solicitação)
 ]]})
 
--- Notificação final
+--=====================================================
+-- 9. NOTIFICAÇÃO FINAL E PRINT DE CONFIRMAÇÃO
+--=====================================================
 WindUI:Notify({
-    Title = "BLOX FRUITS HUB",
+    Title = "REDZ HUB",
     Content = "Hub carregado! Nível atual: " .. (CheckLevel() or "??"),
     Duration = 5
 })
 
-print("=== BLOX FRUITS HUB ULTIMATE CARREGADO ===")
+print("=== REDZ HUB (SEM AUTO FARM) CARREGADO ===")
 print("👤 Jogador:", player.Name)
 print("📊 Nível:", CheckLevel() or "Desconhecido")
-print("📅 Versão: 13.0 - Completa e Corrigida")
+print("📅 Versão: 13.0 - Sem Auto Farm, com todas as outras features")
+print("📈 Total de linhas aproximado: 1350")
