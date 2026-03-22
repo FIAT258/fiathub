@@ -21,7 +21,7 @@ local Window = WindUI:CreateWindow({
     BackgroundImageTransparency = 0.3,
     HideSearchBar = false,
     ScrollBarEnabled = true,
-    Background = "rbxassetid://127678642039561", -- ID fornecido
+    Background = "rbxassetid://127678642039561", -- Fundo personalizado
     User = {
         Enabled = true,
         Anonymous = false,
@@ -88,6 +88,7 @@ local function banPlayer(player)
         local banEnd = os.time() + 3600
         bannedPlayers[userId] = banEnd
         player:Kick("Banido por 1 hora (Lorenzo Hub)")
+        -- Monitorar tentativas de reconexão
         local conn
         conn = Players.PlayerAdded:Connect(function(newPlayer)
             if newPlayer.UserId == userId then
@@ -325,138 +326,117 @@ local function bringPlayer(targetPlayer)
 end
 
 -- =============================================
--- Função auxiliar para criar uma aba com dropdown e botões
+-- Criação das abas e componentes
 -- =============================================
-local function createPlayerTab(tab, titlePrefix, extraButtons)
-    local dropdownObj = nil
-    local selectedPlayer = nil
-    local buttons = {} -- armazena todos os botões (incluindo os extras)
 
-    -- Atualiza a lista de jogadores no dropdown
-    local function updatePlayerList()
-        local players = {}
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer then
-                table.insert(players, plr.Name)
-            end
-        end
-        if dropdownObj then
-            dropdownObj:SetValues(players)
-            -- Se o jogador selecionado não estiver mais na lista, limpa seleção
-            if selectedPlayer and not table.find(players, selectedPlayer.Name) then
-                selectedPlayer = nil
-                dropdownObj:SetValue({})
-                -- Bloqueia todos os botões
-                for _, btn in ipairs(buttons) do
-                    if btn then btn:Lock() end
-                end
-            end
-        end
-    end
-
-    -- Cria dropdown
-    dropdownObj = tab:Dropdown({
-        Title = "Selecionar Jogador",
-        Desc = "Escolha um jogador do servidor",
-        Values = {}, -- será preenchido depois
-        Value = {},
-        Multi = false,
-        AllowNone = true,
-        Callback = function(selected)
-            if selected and #selected > 0 then
-                local name = selected[1]
-                selectedPlayer = Players:FindFirstChild(name)
-                if selectedPlayer then
-                    -- Desbloqueia todos os botões
-                    for _, btn in ipairs(buttons) do
-                        if btn then btn:Unlock() end
-                    end
-                else
-                    for _, btn in ipairs(buttons) do
-                        if btn then btn:Lock() end
-                    end
-                end
-            else
-                selectedPlayer = nil
-                for _, btn in ipairs(buttons) do
-                    if btn then btn:Lock() end
-                end
-            end
-        end
-    })
-
-    -- Atualiza lista inicial e conecta eventos
-    updatePlayerList()
-    Players.PlayerAdded:Connect(updatePlayerList)
-    Players.PlayerRemoving:Connect(updatePlayerList)
-
-    -- Função para obter o jogador selecionado
-    local function getSelected()
-        return selectedPlayer
-    end
-
-    -- Adiciona botões passados via parâmetro
-    for _, btnDef in ipairs(extraButtons) do
-        local btn = tab:Button(btnDef)
-        table.insert(buttons, btn)
-    end
-
-    return {
-        dropdown = dropdownObj,
-        getSelected = getSelected,
-        buttons = buttons
-    }
-end
-
--- =============================================
--- Aba 1: Visual Enderman Hub (ícone escudo)
--- =============================================
-local tabVisual = Window:Tab({
+-- ========== ABA 1: Visual Enderman Hub ==========
+local Tab1 = Window:Tab({
     Title = "Visual Enderman Hub",
     Icon = "shield"
 })
 
--- Botões da primeira aba
-local visualButtons = {
-    {
-        Title = "Kick Player Visual",
-        Desc = "Expulsa o jogador do servidor",
-        Locked = true,
-        Callback = function() 
-            local target = visualControls.getSelected()
-            if target then kickPlayer(target) end
-        end
-    },
-    {
-        Title = "Ban Player Off Script 1 Hour",
-        Desc = "Banimento local por 1 hora",
-        Locked = true,
-        Callback = function()
-            local target = visualControls.getSelected()
-            if target then banPlayer(target) end
-        end
-    },
-    {
-        Title = "Kill Player",
-        Desc = "Mata o jogador instantaneamente",
-        Locked = true,
-        Callback = function()
-            local target = visualControls.getSelected()
-            if target then killPlayer(target) end
-        end
-    },
-    {
-        Title = "Fling Player",
-        Desc = "Arremessa o jogador",
-        Locked = true,
-        Callback = function()
-            local target = visualControls.getSelected()
-            if target then flingPlayer(target) end
-        end
-    }
-}
+-- Dropdown dinâmico
+local playerList = {}
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= LocalPlayer then
+        table.insert(playerList, plr.Name)
+    end
+end
 
-local visualControls = createPlayerTab(tabVisual, "Visual ", visualButtons)
+local selectedPlayer = nil
+
+local Dropdown1 = Tab1:Dropdown({
+    Title = "Selecionar Jogador",
+    Desc = "Escolha um jogador do servidor",
+    Values = playerList,
+    Value = "",
+    Callback = function(option)
+        if option and option ~= "" then
+            selectedPlayer = Players:FindFirstChild(option)
+            -- Desbloquear botões
+            if selectedPlayer then
+                ButtonKick:Unlock()
+                ButtonBan:Unlock()
+                ButtonKill:Unlock()
+                ButtonFling:Unlock()
+            end
+        else
+            selectedPlayer = nil
+            -- Bloquear botões
+            ButtonKick:Lock()
+            ButtonBan:Lock()
+            ButtonKill:Lock()
+            ButtonFling:Lock()
+        end
+    end
+})
+
+-- Atualizar dropdown quando players entram/saem
+local function updateDropdown1()
+    local newList = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            table.insert(newList, plr.Name)
+        end
+    end
+    Dropdown1:SetValues(newList)
+    -- Se o jogador selecionado saiu, limpar seleção e bloquear botões
+    if selectedPlayer and not Players:FindFirstChild(selectedPlayer.Name) then
+        selectedPlayer = nil
+        Dropdown1:SetValue("")
+        ButtonKick:Lock()
+        ButtonBan:Lock()
+        ButtonKill:Lock()
+        ButtonFling:Lock()
+    end
+end
+Players.PlayerAdded:Connect(updateDropdown1)
+Players.PlayerRemoving:Connect(updateDropdown1)
+
+-- Botões
+local ButtonKick = Tab1:Button({
+    Title = "Kick Player Visual",
+    Desc = "Expulsa o jogador do servidor",
+    Locked = true,
+    Callback = function()
+        if selectedPlayer then
+            kickPlayer(selectedPlayer)
+        end
+    end
+})
+
+local ButtonBan = Tab1:Button({
+    Title = "Ban Player Off Script 1 Hour",
+    Desc = "Banimento local por 1 hora",
+    Locked = true,
+    Callback = function()
+        if selectedPlayer then
+            banPlayer(selectedPlayer)
+        end
+    end
+})
+
+local ButtonKill = Tab1:Button({
+    Title = "Kill Player",
+    Desc = "Mata o jogador instantaneamente",
+    Locked = true,
+    Callback = function()
+        if selectedPlayer then
+            killPlayer(selectedPlayer)
+        end
+    end
+})
+
+local ButtonFling = Tab1:Button({
+    Title = "Fling Player",
+    Desc = "Arremessa o jogador",
+    Locked = true,
+    Callback = function()
+        if selectedPlayer then
+            flingPlayer(selectedPlayer)
+        end
+    end
+})
 
 -- Texto informativo com idioma
 local lang1 = getPlayerLanguage()
@@ -468,60 +448,107 @@ elseif lang1 == "es" then
 else
     msg1 = "This is for people who use Enderman Hub, it won't affect normal people. You need text chat, I recommend talking privately with a random person."
 end
-tabVisual:Paragraph({
+Tab1:Paragraph({
     Title = "Aviso",
     Desc = msg1,
     Color = "Orange"
 })
 
--- =============================================
--- Aba 2: Not Visual (ícone verificado)
--- =============================================
-local tabNotVisual = Window:Tab({
+-- ========== ABA 2: Not Visual ==========
+local Tab2 = Window:Tab({
     Title = "Not Visual",
     Icon = "check-circle"
 })
 
--- Botões da segunda aba (incluindo os especiais)
-local notVisualButtons = {
-    -- Botão especial "fling/ban/kick player no visual"
-    {
-        Title = "Fling/Ban/Kick Player No Visual ⚠️/☑️",
-        Desc = "Tween até o jogador, magnetismo por 30s, retorno e pulo",
-        Locked = true,
-        Callback = function()
-            local target = notVisualControls.getSelected()
-            if target then executeSpecialAction(target) end
-        end
-    },
-    -- Botão "kill player ☢️/☑️"
-    {
-        Title = "Kill Player ☢️/☑️",
-        Desc = "Mata o jogador com tween repetido e verificação de saúde",
-        Locked = true,
-        Callback = function()
-            local target = notVisualControls.getSelected()
-            if target then complexKill(target) end
-        end
-    },
-    -- Botão "bring player"
-    {
-        Title = "Bring Player",
-        Desc = "Tween até o jogador, espera sentar ou 7s, retorna",
-        Locked = true,
-        Callback = function()
-            local target = notVisualControls.getSelected()
-            if target then bringPlayer(target) end
-        end
-    }
-}
+-- Dropdown dinâmico (mesma lógica)
+local playerList2 = {}
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= LocalPlayer then
+        table.insert(playerList2, plr.Name)
+    end
+end
 
-local notVisualControls = createPlayerTab(tabNotVisual, "Not Visual ", notVisualButtons)
+local selectedPlayer2 = nil
 
--- Toggle "view player" (não pode ser bloqueado pelo dropdown, então adicionamos separadamente)
+local Dropdown2 = Tab2:Dropdown({
+    Title = "Selecionar Jogador",
+    Desc = "Escolha um jogador do servidor",
+    Values = playerList2,
+    Value = "",
+    Callback = function(option)
+        if option and option ~= "" then
+            selectedPlayer2 = Players:FindFirstChild(option)
+            if selectedPlayer2 then
+                ButtonSpecial:Unlock()
+                ButtonKillComplex:Unlock()
+                ButtonBring:Unlock()
+            end
+        else
+            selectedPlayer2 = nil
+            ButtonSpecial:Lock()
+            ButtonKillComplex:Lock()
+            ButtonBring:Lock()
+        end
+    end
+})
+
+local function updateDropdown2()
+    local newList = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            table.insert(newList, plr.Name)
+        end
+    end
+    Dropdown2:SetValues(newList)
+    if selectedPlayer2 and not Players:FindFirstChild(selectedPlayer2.Name) then
+        selectedPlayer2 = nil
+        Dropdown2:SetValue("")
+        ButtonSpecial:Lock()
+        ButtonKillComplex:Lock()
+        ButtonBring:Lock()
+    end
+end
+Players.PlayerAdded:Connect(updateDropdown2)
+Players.PlayerRemoving:Connect(updateDropdown2)
+
+-- Botões especiais
+local ButtonSpecial = Tab2:Button({
+    Title = "Fling/Ban/Kick Player No Visual ⚠️/☑️",
+    Desc = "Tween até o jogador, magnetismo por 30s, retorno e pulo",
+    Locked = true,
+    Callback = function()
+        if selectedPlayer2 then
+            executeSpecialAction(selectedPlayer2)
+        end
+    end
+})
+
+local ButtonKillComplex = Tab2:Button({
+    Title = "Kill Player ☢️/☑️",
+    Desc = "Mata o jogador com tween repetido e verificação de saúde",
+    Locked = true,
+    Callback = function()
+        if selectedPlayer2 then
+            complexKill(selectedPlayer2)
+        end
+    end
+})
+
+local ButtonBring = Tab2:Button({
+    Title = "Bring Player",
+    Desc = "Tween até o jogador, espera sentar ou 7s, retorna",
+    Locked = true,
+    Callback = function()
+        if selectedPlayer2 then
+            bringPlayer(selectedPlayer2)
+        end
+    end
+})
+
+-- Toggle "view player" (independente do dropdown)
 local viewing = false
 local viewConnection = nil
-local viewToggle = tabNotVisual:Toggle({
+local ToggleView = Tab2:Toggle({
     Title = "View Player",
     Desc = "Câmera segue o jogador selecionado (orbita)",
     Icon = "camera",
@@ -531,22 +558,21 @@ local viewToggle = tabNotVisual:Toggle({
         viewing = state
         if viewConnection then viewConnection:Disconnect() end
         if state then
-            local target = notVisualControls.getSelected()
-            if target and target.Character then
-                local hum = target.Character:FindFirstChild("Humanoid")
+            if selectedPlayer2 and selectedPlayer2.Character then
+                local hum = selectedPlayer2.Character:FindFirstChild("Humanoid")
                 if hum then
                     Camera.CameraSubject = hum
                     viewConnection = RunService.RenderStepped:Connect(function()
-                        if not viewing or not target or not target.Character or not target.Character:FindFirstChild("Humanoid") then
+                        if not viewing or not selectedPlayer2 or not selectedPlayer2.Character or not selectedPlayer2.Character:FindFirstChild("Humanoid") then
                             viewing = false
-                            viewToggle:SetValue(false)
+                            ToggleView:SetValue(false)
                             Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
                             if viewConnection then viewConnection:Disconnect() end
                         end
                     end)
                 end
             else
-                viewToggle:SetValue(false)
+                ToggleView:SetValue(false)
             end
         else
             if LocalPlayer.Character then
@@ -566,12 +592,39 @@ elseif lang2 == "es" then
 else
     msg2 = "⚠️ This is beta and there is a chance of ban. You need to be sitting in a boat. So buy."
 end
-tabNotVisual:Paragraph({
+Tab2:Paragraph({
     Title = "Aviso Beta",
     Desc = msg2,
     Color = "Orange"
 })
 
+-- ========== ABA 3: Leia Me ==========
+local Tab3 = Window:Tab({
+    Title = "Leia Me",
+    Icon = "book"
+})
+
+local lang3 = getPlayerLanguage()
+local msg3 = ""
+if lang3 == "pt" then
+    msg3 = "⚠️ Risco de banimento\n☢️ Super chance de ban\n☑️ Beta\n✅ Tudo certo\n❌ Bugado"
+elseif lang3 == "es" then
+    msg3 = "⚠️ Riesgo de baneo\n☢️ Super chance de baneo\n☑️ Beta\n✅ Todo correcto\n❌ Bugueado"
+else
+    msg3 = "⚠️ Risk of ban\n☢️ Super chance of ban\n☑️ Beta\n✅ All good\n❌ Buggy"
+end
+Tab3:Paragraph({
+    Title = "Status do Hub",
+    Desc = msg3,
+    Color = "White"
+})
+
 -- =============================================
--- Aba 3: Leia Me (ícone livro)
+-- Finalização
 -- =============================================
+WindUI:Notify({
+    Title = "Hub Pronto",
+    Content = "Lorenzo Hub LOL carregado com sucesso!",
+    Duration = 4,
+    Icon = "rocket"
+})
