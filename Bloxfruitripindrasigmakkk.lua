@@ -1,7 +1,7 @@
 -- Carregar WindUI
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
--- Criar janela principal (simples)
+-- Criar janela principal
 local Window = WindUI:CreateWindow({
     Title = "Lorenzo Hub LOL | Painel de Adm Blox Fruits",
     Icon = "crown",
@@ -17,9 +17,6 @@ local Window = WindUI:CreateWindow({
     BackgroundImageTransparency = 0.3,
     HideSearchBar = false,
     ScrollBarEnabled = true
-    -- Background removido
-    -- User removido
-    -- KeySystem removido
 })
 
 -- Tag de versão
@@ -39,7 +36,7 @@ WindUI:Notify({
 })
 
 -- =============================================
--- Serviços
+-- Serviços e variáveis globais
 -- =============================================
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -295,62 +292,7 @@ local Tab1 = Window:Tab({
     Icon = "shield"
 })
 
--- Dropdown dinâmico
-local playerList = {}
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= LocalPlayer then
-        table.insert(playerList, plr.Name)
-    end
-end
-
-local selectedPlayer = nil
-
-local Dropdown1 = Tab1:Dropdown({
-    Title = "Selecionar Jogador",
-    Desc = "Escolha um jogador do servidor",
-    Values = playerList,
-    Value = "",
-    Callback = function(option)
-        if option and option ~= "" then
-            selectedPlayer = Players:FindFirstChild(option)
-            if selectedPlayer then
-                ButtonKick:Unlock()
-                ButtonBan:Unlock()
-                ButtonKill:Unlock()
-                ButtonFling:Unlock()
-            end
-        else
-            selectedPlayer = nil
-            ButtonKick:Lock()
-            ButtonBan:Lock()
-            ButtonKill:Lock()
-            ButtonFling:Lock()
-        end
-    end
-})
-
--- Atualizar dropdown
-local function updateDropdown1()
-    local newList = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            table.insert(newList, plr.Name)
-        end
-    end
-    Dropdown1:SetValues(newList)
-    if selectedPlayer and not Players:FindFirstChild(selectedPlayer.Name) then
-        selectedPlayer = nil
-        Dropdown1:SetValue("")
-        ButtonKick:Lock()
-        ButtonBan:Lock()
-        ButtonKill:Lock()
-        ButtonFling:Lock()
-    end
-end
-Players.PlayerAdded:Connect(updateDropdown1)
-Players.PlayerRemoving:Connect(updateDropdown1)
-
--- Botões
+-- Criar os botões primeiro (travados)
 local ButtonKick = Tab1:Button({
     Title = "Kick Player Visual",
     Desc = "Expulsa o jogador do servidor",
@@ -387,7 +329,60 @@ local ButtonFling = Tab1:Button({
     end
 })
 
--- Texto com idioma
+-- Dropdown (agora os botões já existem)
+local selectedPlayer = nil
+
+local function updatePlayerList()
+    local players = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            table.insert(players, plr.Name)
+        end
+    end
+    return players
+end
+
+local Dropdown1 = Tab1:Dropdown({
+    Title = "Selecionar Jogador",
+    Desc = "Escolha um jogador do servidor",
+    Values = updatePlayerList(),
+    Value = "",
+    Callback = function(option)
+        if option and option ~= "" then
+            selectedPlayer = Players:FindFirstChild(option)
+            if selectedPlayer then
+                ButtonKick:Unlock()
+                ButtonBan:Unlock()
+                ButtonKill:Unlock()
+                ButtonFling:Unlock()
+            end
+        else
+            selectedPlayer = nil
+            ButtonKick:Lock()
+            ButtonBan:Lock()
+            ButtonKill:Lock()
+            ButtonFling:Lock()
+        end
+    end
+})
+
+-- Atualizar dropdown dinamicamente
+local function refreshDropdown1()
+    local newList = updatePlayerList()
+    Dropdown1:SetValues(newList)
+    if selectedPlayer and not Players:FindFirstChild(selectedPlayer.Name) then
+        selectedPlayer = nil
+        Dropdown1:SetValue("")
+        ButtonKick:Lock()
+        ButtonBan:Lock()
+        ButtonKill:Lock()
+        ButtonFling:Lock()
+    end
+end
+Players.PlayerAdded:Connect(refreshDropdown1)
+Players.PlayerRemoving:Connect(refreshDropdown1)
+
+-- Texto informativo
 local lang1 = getPlayerLanguage()
 local msg1 = ""
 if lang1 == "pt" then
@@ -409,58 +404,7 @@ local Tab2 = Window:Tab({
     Icon = "check-circle"
 })
 
--- Dropdown
-local playerList2 = {}
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= LocalPlayer then
-        table.insert(playerList2, plr.Name)
-    end
-end
-
-local selectedPlayer2 = nil
-
-local Dropdown2 = Tab2:Dropdown({
-    Title = "Selecionar Jogador",
-    Desc = "Escolha um jogador do servidor",
-    Values = playerList2,
-    Value = "",
-    Callback = function(option)
-        if option and option ~= "" then
-            selectedPlayer2 = Players:FindFirstChild(option)
-            if selectedPlayer2 then
-                ButtonSpecial:Unlock()
-                ButtonKillComplex:Unlock()
-                ButtonBring:Unlock()
-            end
-        else
-            selectedPlayer2 = nil
-            ButtonSpecial:Lock()
-            ButtonKillComplex:Lock()
-            ButtonBring:Lock()
-        end
-    end
-})
-
-local function updateDropdown2()
-    local newList = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            table.insert(newList, plr.Name)
-        end
-    end
-    Dropdown2:SetValues(newList)
-    if selectedPlayer2 and not Players:FindFirstChild(selectedPlayer2.Name) then
-        selectedPlayer2 = nil
-        Dropdown2:SetValue("")
-        ButtonSpecial:Lock()
-        ButtonKillComplex:Lock()
-        ButtonBring:Lock()
-    end
-end
-Players.PlayerAdded:Connect(updateDropdown2)
-Players.PlayerRemoving:Connect(updateDropdown2)
-
--- Botões especiais
+-- Botões da segunda aba (travados)
 local ButtonSpecial = Tab2:Button({
     Title = "Fling/Ban/Kick Player No Visual ⚠️/☑️",
     Desc = "Tween até o jogador, magnetismo por 30s, retorno e pulo",
@@ -487,6 +431,46 @@ local ButtonBring = Tab2:Button({
         if selectedPlayer2 then bringPlayer(selectedPlayer2) end
     end
 })
+
+-- Dropdown segunda aba
+local selectedPlayer2 = nil
+
+local Dropdown2 = Tab2:Dropdown({
+    Title = "Selecionar Jogador",
+    Desc = "Escolha um jogador do servidor",
+    Values = updatePlayerList(),
+    Value = "",
+    Callback = function(option)
+        if option and option ~= "" then
+            selectedPlayer2 = Players:FindFirstChild(option)
+            if selectedPlayer2 then
+                ButtonSpecial:Unlock()
+                ButtonKillComplex:Unlock()
+                ButtonBring:Unlock()
+            end
+        else
+            selectedPlayer2 = nil
+            ButtonSpecial:Lock()
+            ButtonKillComplex:Lock()
+            ButtonBring:Lock()
+        end
+    end
+})
+
+-- Atualizar dropdown segunda aba
+local function refreshDropdown2()
+    local newList = updatePlayerList()
+    Dropdown2:SetValues(newList)
+    if selectedPlayer2 and not Players:FindFirstChild(selectedPlayer2.Name) then
+        selectedPlayer2 = nil
+        Dropdown2:SetValue("")
+        ButtonSpecial:Lock()
+        ButtonKillComplex:Lock()
+        ButtonBring:Lock()
+    end
+end
+Players.PlayerAdded:Connect(refreshDropdown2)
+Players.PlayerRemoving:Connect(refreshDropdown2)
 
 -- Toggle view player
 local viewing = false
