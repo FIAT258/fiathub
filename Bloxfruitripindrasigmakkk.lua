@@ -36,7 +36,7 @@ WindUI:Notify({
 })
 
 -- =============================================
--- Serviços e variáveis globais
+-- Serviços e variáveis
 -- =============================================
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -44,8 +44,7 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 
--- Lista de banidos temporários
-local bannedPlayers = {}
+local bannedPlayers = {} -- ban temporário
 
 -- Função para idioma
 local function getPlayerLanguage()
@@ -56,7 +55,7 @@ local function getPlayerLanguage()
 end
 
 -- =============================================
--- Ações básicas
+-- Ações básicas (kick, ban, kill, fling)
 -- =============================================
 local function kickPlayer(player)
     if player and player ~= LocalPlayer then
@@ -132,7 +131,7 @@ local function jump()
     end
 end
 
--- Magnetismo
+-- Magnetismo (puxa objetos não ancorados e gira)
 local function startMagnet(targetPlayer, duration)
     local targetChar = targetPlayer.Character
     if not targetChar then return end
@@ -148,6 +147,7 @@ local function startMagnet(targetPlayer, duration)
                 local model = part:FindFirstAncestorOfClass("Model")
                 local isPlayer = model and model:FindFirstChild("Humanoid")
                 if not isPlayer and part.Parent ~= targetChar then
+                    -- Força de atração
                     local direction = (targetRoot.Position - part.Position).Unit
                     local velocity = direction * 100
                     local bv = part:FindFirstChild("MagnetVelocity") or Instance.new("BodyVelocity")
@@ -157,6 +157,7 @@ local function startMagnet(targetPlayer, duration)
                     bv.Parent = part
                     game:GetService("Debris"):AddItem(bv, 0.2)
 
+                    -- Rotação rápida em torno do próprio eixo
                     local angVel = part:FindFirstChild("MagnetAngular") or Instance.new("BodyAngularVelocity")
                     angVel.Name = "MagnetAngular"
                     angVel.AngularVelocity = Vector3.new(0, 50, 0)
@@ -180,7 +181,7 @@ local function startMagnet(targetPlayer, duration)
     active = false
 end
 
--- Ação especial
+-- Ação especial "fling/ban/kick player no visual"
 local function executeSpecialAction(targetPlayer)
     if not targetPlayer then return end
     local originalPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
@@ -191,17 +192,22 @@ local function executeSpecialAction(targetPlayer)
     local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
     if not targetRoot then return end
 
+    -- Tween até o alvo (290 velocidade)
     local tween = tweenToPosition(targetRoot.Position, 290)
     if tween then tween.Completed:Wait() end
 
+    -- Ativar magnetismo por 30 segundos
     startMagnet(targetPlayer, 30)
+
+    -- Aguardar 30 segundos
     task.wait(30)
 
+    -- Voltar à posição original
     tweenToPosition(originalPos, 290):Wait()
     jump()
 end
 
--- Kill complexo
+-- Kill player ☢️/☑️ (complexo)
 local killingActive = false
 local function complexKill(targetPlayer)
     if killingActive then return end
@@ -229,20 +235,24 @@ local function complexKill(targetPlayer)
         local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
         if not targetRoot then break end
 
+        -- Tween até o alvo (250 velocidade)
         local tween = tweenToPosition(targetRoot.Position, 250)
         if tween then tween.Completed:Wait() end
 
+        -- Aguarda sentar ou 6 segundos
         local startTime = tick()
         repeat
             task.wait(0.1)
             local sitting = targetChar:FindFirstChild("Humanoid") and targetChar.Humanoid.Sit
             if sitting or tick() - startTime >= 6 then
+                -- Tween para baixo rapidamente
                 local downPos = targetRoot.Position - Vector3.new(0, 20, 0)
                 tweenToPosition(downPos, 500):Wait()
                 break
             end
         until not killingActive
 
+        -- Verifica se alvo morreu
         local humanoid = targetChar:FindFirstChild("Humanoid")
         if not humanoid or humanoid.Health <= 0 then
             if humanoid then humanoid.Sit = true end
@@ -267,9 +277,11 @@ local function bringPlayer(targetPlayer)
     local targetRoot = targetChar:FindFirstChild("HumanoidRootPart")
     if not targetRoot then return end
 
+    -- Tween até o alvo (250 velocidade)
     local tween = tweenToPosition(targetRoot.Position, 250)
     if tween then tween.Completed:Wait() end
 
+    -- Aguarda sentar ou 7 segundos
     local startTime = tick()
     repeat
         task.wait(0.1)
@@ -279,57 +291,47 @@ local function bringPlayer(targetPlayer)
         end
     until false
 
+    -- Volta à posição original
     tweenToPosition(originalPos, 250):Wait()
 end
 
 -- =============================================
--- Criação das abas
+-- Criação da aba única: Not Visual
 -- =============================================
-
--- ========== ABA 1: Visual Enderman Hub ==========
-local Tab1 = Window:Tab({
-    Title = "Visual Enderman Hub",
-    Icon = "shield"
+local Tab = Window:Tab({
+    Title = "Not Visual",
+    Icon = "check-circle"
 })
 
--- Criar os botões primeiro (travados)
-local ButtonKick = Tab1:Button({
-    Title = "Kick Player Visual",
-    Desc = "Expulsa o jogador do servidor",
+-- Botões (travados inicialmente)
+local ButtonSpecial = Tab:Button({
+    Title = "Fling/Ban/Kick Player No Visual ⚠️/☑️",
+    Desc = "Tween até o jogador, magnetismo por 30s, retorno e pulo",
     Locked = true,
     Callback = function()
-        if selectedPlayer then kickPlayer(selectedPlayer) end
+        if selectedPlayer then executeSpecialAction(selectedPlayer) end
     end
 })
 
-local ButtonBan = Tab1:Button({
-    Title = "Ban Player Off Script 1 Hour",
-    Desc = "Banimento local por 1 hora",
+local ButtonKillComplex = Tab:Button({
+    Title = "Kill Player ☢️/☑️",
+    Desc = "Mata o jogador com tween repetido e verificação de saúde",
     Locked = true,
     Callback = function()
-        if selectedPlayer then banPlayer(selectedPlayer) end
+        if selectedPlayer then complexKill(selectedPlayer) end
     end
 })
 
-local ButtonKill = Tab1:Button({
-    Title = "Kill Player",
-    Desc = "Mata o jogador instantaneamente",
+local ButtonBring = Tab:Button({
+    Title = "Bring Player",
+    Desc = "Tween até o jogador, espera sentar ou 7s, retorna",
     Locked = true,
     Callback = function()
-        if selectedPlayer then killPlayer(selectedPlayer) end
+        if selectedPlayer then bringPlayer(selectedPlayer) end
     end
 })
 
-local ButtonFling = Tab1:Button({
-    Title = "Fling Player",
-    Desc = "Arremessa o jogador",
-    Locked = true,
-    Callback = function()
-        if selectedPlayer then flingPlayer(selectedPlayer) end
-    end
-})
-
--- Dropdown (agora os botões já existem)
+-- Dropdown dinâmico
 local selectedPlayer = nil
 
 local function updatePlayerList()
@@ -342,7 +344,7 @@ local function updatePlayerList()
     return players
 end
 
-local Dropdown1 = Tab1:Dropdown({
+local Dropdown = Tab:Dropdown({
     Title = "Selecionar Jogador",
     Desc = "Escolha um jogador do servidor",
     Values = updatePlayerList(),
@@ -351,105 +353,12 @@ local Dropdown1 = Tab1:Dropdown({
         if option and option ~= "" then
             selectedPlayer = Players:FindFirstChild(option)
             if selectedPlayer then
-                ButtonKick:Unlock()
-                ButtonBan:Unlock()
-                ButtonKill:Unlock()
-                ButtonFling:Unlock()
-            end
-        else
-            selectedPlayer = nil
-            ButtonKick:Lock()
-            ButtonBan:Lock()
-            ButtonKill:Lock()
-            ButtonFling:Lock()
-        end
-    end
-})
-
--- Atualizar dropdown dinamicamente
-local function refreshDropdown1()
-    local newList = updatePlayerList()
-    Dropdown1:SetValues(newList)
-    if selectedPlayer and not Players:FindFirstChild(selectedPlayer.Name) then
-        selectedPlayer = nil
-        Dropdown1:SetValue("")
-        ButtonKick:Lock()
-        ButtonBan:Lock()
-        ButtonKill:Lock()
-        ButtonFling:Lock()
-    end
-end
-Players.PlayerAdded:Connect(refreshDropdown1)
-Players.PlayerRemoving:Connect(refreshDropdown1)
-
--- Texto informativo
-local lang1 = getPlayerLanguage()
-local msg1 = ""
-if lang1 == "pt" then
-    msg1 = "Isso é para pessoas que usam o Enderman Hub, não vai afetar pessoas normais. É preciso do chat de texto, recomendo falar no privado com uma pessoa aleatória."
-elseif lang1 == "es" then
-    msg1 = "Esto es para personas que usan Enderman Hub, no afectará a personas normales. Se necesita el chat de texto, recomiendo hablar en privado con una persona aleatoria."
-else
-    msg1 = "This is for people who use Enderman Hub, it won't affect normal people. You need text chat, I recommend talking privately with a random person."
-end
-Tab1:Paragraph({
-    Title = "Aviso",
-    Desc = msg1,
-    Color = "Orange"
-})
-
--- ========== ABA 2: Not Visual ==========
-local Tab2 = Window:Tab({
-    Title = "Not Visual",
-    Icon = "check-circle"
-})
-
--- Botões da segunda aba (travados)
-local ButtonSpecial = Tab2:Button({
-    Title = "Fling/Ban/Kick Player No Visual ⚠️/☑️",
-    Desc = "Tween até o jogador, magnetismo por 30s, retorno e pulo",
-    Locked = true,
-    Callback = function()
-        if selectedPlayer2 then executeSpecialAction(selectedPlayer2) end
-    end
-})
-
-local ButtonKillComplex = Tab2:Button({
-    Title = "Kill Player ☢️/☑️",
-    Desc = "Mata o jogador com tween repetido e verificação de saúde",
-    Locked = true,
-    Callback = function()
-        if selectedPlayer2 then complexKill(selectedPlayer2) end
-    end
-})
-
-local ButtonBring = Tab2:Button({
-    Title = "Bring Player",
-    Desc = "Tween até o jogador, espera sentar ou 7s, retorna",
-    Locked = true,
-    Callback = function()
-        if selectedPlayer2 then bringPlayer(selectedPlayer2) end
-    end
-})
-
--- Dropdown segunda aba
-local selectedPlayer2 = nil
-
-local Dropdown2 = Tab2:Dropdown({
-    Title = "Selecionar Jogador",
-    Desc = "Escolha um jogador do servidor",
-    Values = updatePlayerList(),
-    Value = "",
-    Callback = function(option)
-        if option and option ~= "" then
-            selectedPlayer2 = Players:FindFirstChild(option)
-            if selectedPlayer2 then
                 ButtonSpecial:Unlock()
                 ButtonKillComplex:Unlock()
                 ButtonBring:Unlock()
             end
         else
-            selectedPlayer2 = nil
+            selectedPlayer = nil
             ButtonSpecial:Lock()
             ButtonKillComplex:Lock()
             ButtonBring:Lock()
@@ -457,25 +366,25 @@ local Dropdown2 = Tab2:Dropdown({
     end
 })
 
--- Atualizar dropdown segunda aba
-local function refreshDropdown2()
+-- Atualizar dropdown quando players entram/saem
+local function refreshDropdown()
     local newList = updatePlayerList()
-    Dropdown2:SetValues(newList)
-    if selectedPlayer2 and not Players:FindFirstChild(selectedPlayer2.Name) then
-        selectedPlayer2 = nil
-        Dropdown2:SetValue("")
+    Dropdown:SetValues(newList)
+    if selectedPlayer and not Players:FindFirstChild(selectedPlayer.Name) then
+        selectedPlayer = nil
+        Dropdown:SetValue("")
         ButtonSpecial:Lock()
         ButtonKillComplex:Lock()
         ButtonBring:Lock()
     end
 end
-Players.PlayerAdded:Connect(refreshDropdown2)
-Players.PlayerRemoving:Connect(refreshDropdown2)
+Players.PlayerAdded:Connect(refreshDropdown)
+Players.PlayerRemoving:Connect(refreshDropdown)
 
 -- Toggle view player
 local viewing = false
 local viewConnection = nil
-local ToggleView = Tab2:Toggle({
+local ToggleView = Tab:Toggle({
     Title = "View Player",
     Desc = "Câmera segue o jogador selecionado (orbita)",
     Icon = "camera",
@@ -485,12 +394,12 @@ local ToggleView = Tab2:Toggle({
         viewing = state
         if viewConnection then viewConnection:Disconnect() end
         if state then
-            if selectedPlayer2 and selectedPlayer2.Character then
-                local hum = selectedPlayer2.Character:FindFirstChild("Humanoid")
+            if selectedPlayer and selectedPlayer.Character then
+                local hum = selectedPlayer.Character:FindFirstChild("Humanoid")
                 if hum then
                     Camera.CameraSubject = hum
                     viewConnection = RunService.RenderStepped:Connect(function()
-                        if not viewing or not selectedPlayer2 or not selectedPlayer2.Character or not selectedPlayer2.Character:FindFirstChild("Humanoid") then
+                        if not viewing or not selectedPlayer or not selectedPlayer.Character or not selectedPlayer.Character:FindFirstChild("Humanoid") then
                             viewing = false
                             ToggleView:SetValue(false)
                             Camera.CameraSubject = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -509,41 +418,20 @@ local ToggleView = Tab2:Toggle({
     end
 })
 
--- Texto beta
-local lang2 = getPlayerLanguage()
-local msg2 = ""
-if lang2 == "pt" then
-    msg2 = "⚠️ Isto é beta e tem chance de dar ban. É necessário estar sentado em um barco. Então compre."
-elseif lang2 == "es" then
-    msg2 = "⚠️ Esto es beta y tiene posibilidad de baneo. Es necesario estar sentado en un bote. Así que compra."
+-- Texto informativo (beta) com idioma
+local lang = getPlayerLanguage()
+local msg = ""
+if lang == "pt" then
+    msg = "⚠️ Isto é beta e tem chance de dar ban. É necessário estar sentado em um barco. Então compre."
+elseif lang == "es" then
+    msg = "⚠️ Esto es beta y tiene posibilidad de baneo. Es necesario estar sentado en un bote. Así que compra."
 else
-    msg2 = "⚠️ This is beta and there is a chance of ban. You need to be sitting in a boat. So buy."
+    msg = "⚠️ This is beta and there is a chance of ban. You need to be sitting in a boat. So buy."
 end
-Tab2:Paragraph({
+Tab:Paragraph({
     Title = "Aviso Beta",
-    Desc = msg2,
+    Desc = msg,
     Color = "Orange"
-})
-
--- ========== ABA 3: Leia Me ==========
-local Tab3 = Window:Tab({
-    Title = "Leia Me",
-    Icon = "book"
-})
-
-local lang3 = getPlayerLanguage()
-local msg3 = ""
-if lang3 == "pt" then
-    msg3 = "⚠️ Risco de banimento\n☢️ Super chance de ban\n☑️ Beta\n✅ Tudo certo\n❌ Bugado"
-elseif lang3 == "es" then
-    msg3 = "⚠️ Riesgo de baneo\n☢️ Super chance de baneo\n☑️ Beta\n✅ Todo correcto\n❌ Bugueado"
-else
-    msg3 = "⚠️ Risk of ban\n☢️ Super chance of ban\n☑️ Beta\n✅ All good\n❌ Buggy"
-end
-Tab3:Paragraph({
-    Title = "Status do Hub",
-    Desc = msg3,
-    Color = "White"
 })
 
 -- =============================================
@@ -551,7 +439,7 @@ Tab3:Paragraph({
 -- =============================================
 WindUI:Notify({
     Title = "Hub Pronto",
-    Content = "Lorenzo Hub LOL carregado com sucesso!",
+    Content = "Apenas a aba 'Not Visual' está disponível.",
     Duration = 4,
     Icon = "rocket"
 })
