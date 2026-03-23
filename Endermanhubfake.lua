@@ -17,9 +17,9 @@ local Window = WindUI:CreateWindow({
     SideBarWidth = 180,
     HideSearchBar = true,
     KeySystem = {
-        Key = {"enderman2025"},
-        Note = "Digite a chave para acessar o hub",
-        URL = "",
+        Key = {"Endermanhub-key-130-KEY/LUA"},
+        Note = "A key salva para toda vida",
+        URL = "https://linkvertise.com/1460648/0qx6liYVnx53?o=sharing",
         SaveKey = true,
     }
 })
