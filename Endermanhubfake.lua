@@ -11,15 +11,15 @@ local Window = WindUI:CreateWindow({
     Size = UDim2.fromOffset(500, 400),
     MinSize = Vector2.new(450, 350),
     MaxSize = Vector2.new(700, 500),
-    Transparent = true,
+    Transparent = false,
     Theme = "Dark",
     Resizable = true,
     SideBarWidth = 180,
     HideSearchBar = true,
     KeySystem = {
-        Key = {"enderman2025"},
-        Note = "Digite a chave para acessar o hub",
-        URL = "",
+        Key = {"Endermanhub-key-130-KEY/LUA"},
+        Note = "KEY SALVA PARA TODA VIDA antes de dúvidas mais coisas no hub em breve",
+        URL = "https://linkvertise.com/1460648/0qx6liYVnx53?o=sharing",
         SaveKey = true,
     }
 })
